@@ -32,33 +32,48 @@
     <!-- Scanner -->
     <div class="scanner-viewport" [class.flash-green]="flashActive()">
 
-        @if (!hasCamera()) {
-        <div class="no-camera">
-            <span class="no-camera-icon">📷</span>
-            <p>No se detectó cámara</p>
-            <small>Asegurate de dar permisos de cámara</small>
-        </div>
-        } @else {
         <zxing-scanner [enable]="scannerEnabled()" [device]="selectedCamera()" [formats]="formats"
             (camerasFound)="onCamerasFound($event)" (camerasNotFound)="onCamerasNotFound()"
             (scanSuccess)="onCodeScanned($event)" (scanError)="onScanError($event)" [style.width]="'100%'"
             [style.height]="'100%'">
         </zxing-scanner>
 
+        @if (!hasCamera()) {
+        <div class="no-camera">
+            <span class="no-camera-icon">📷</span>
+            <p>No se detectó cámara</p>
+            <small>Asegurate de dar permisos de cámara</small>
+        </div>
+        }
+
+
+        <!-- @if (!hasCamera()) {
+        <div class="no-camera">
+            <span class="no-camera-icon">📷</span>
+            <p>No se detectó cámara</p>
+            <small>Asegurate de dar permisos de cámara</small>
+        </div>
+        } @else { -->
+        <!-- <zxing-scanner [enable]="scannerEnabled()" [device]="selectedCamera()" [formats]="formats"
+            (camerasFound)="onCamerasFound($event)" (camerasNotFound)="onCamerasNotFound()"
+            (scanSuccess)="onCodeScanned($event)" (scanError)="onScanError($event)" [style.width]="'100%'"
+            [style.height]="'100%'">
+        </zxing-scanner> -->
+
         <!-- Marco de escaneo -->
-        <div class="scan-frame">
+        <!-- <div class="scan-frame">
             <div class="corner tl"></div>
             <div class="corner tr"></div>
             <div class="corner bl"></div>
             <div class="corner br"></div>
             <div class="scan-line"></div>
-        </div>
+        </div> -->
 
         <!-- Texto guía -->
-        <div class="scan-hint">
+        <!-- <div class="scan-hint">
             <span>Apuntá al código QR del carnet</span>
         </div>
-        }
+        } -->
     </div>
 
     <!-- Feedback overlay -->
