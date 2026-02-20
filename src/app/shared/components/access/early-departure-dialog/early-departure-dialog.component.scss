@@ -1,0 +1,76 @@
+// src/app/shared/components/access/early-departure-dialog/early-departure-dialog.component.scss
+
+.dialog-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.dialog-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 0.6rem;
+    background: rgba(234, 179, 8, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    i {
+        font-size: 1.2rem;
+        color: #ca8a04;
+    }
+}
+
+.dialog-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--surface-900);
+    margin: 0;
+}
+.dialog-subtitle {
+    font-size: 0.82rem;
+    color: var(--text-color-secondary);
+    margin: 0;
+}
+
+.form-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    label {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--text-color-secondary);
+    }
+}
+
+.req {
+    color: var(--red-500);
+}
+.error-msg {
+    font-size: 0.75rem;
+    color: var(--red-500);
+}
+.dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+@media (max-width: 480px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+}

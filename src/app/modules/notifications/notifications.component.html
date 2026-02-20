@@ -1,0 +1,348 @@
+<!-- src/app/modules/notifications/notifications.component.html -->
+<div class="notif-page">
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-header-content">
+            <div>
+                <h1 class="page-title">
+                    <i class="pi pi-bell"></i> Notificaciones
+                    @if (stats()?.unread > 0) {
+                    <span class="unread-badge">{{ stats().unread }}</span>
+                    }
+                </h1>
+                <p class="page-subtitle">Centro de notificaciones y comunicados institucionales</p>
+            </div>
+            <div class="header-actions">
+                @if (selectedTypeUnread > 0) {
+                <button pButton label="Marcar todas leídas" icon="pi pi-check-square" severity="secondary"
+                    [outlined]="true" (click)="markAllRead()"></button>
+                }
+                <button pButton label="Nueva notificación" icon="pi pi-plus" (click)="openCreate()"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    @if (stats()) {
+    <div class="stats-row">
+        <div class="stat-chip">
+            <i class="pi pi-inbox"></i>
+            <span class="sc-num">{{ stats().total }}</span>
+            <span class="sc-lbl">Total</span>
+        </div>
+        <div class="stat-chip stat-chip-warn">
+            <i class="pi pi-envelope"></i>
+            <span class="sc-num">{{ stats().unread }}</span>
+            <span class="sc-lbl">No leídas</span>
+        </div>
+        <div class="stat-chip stat-chip-danger">
+            <i class="pi pi-exclamation-circle"></i>
+            <span class="sc-num">{{ stats().critical }}</span>
+            <span class="sc-lbl">Críticas</span>
+        </div>
+        <div class="stat-chip stat-chip-info">
+            <i class="pi pi-send"></i>
+            <span class="sc-num">{{ stats().unsent }}</span>
+            <span class="sc-lbl">Sin enviar</span>
+        </div>
+    </div>
+    }
+
+    <!-- Layout: sidebar de tipos + lista -->
+    <div class="notif-layout">
+
+        <!-- Sidebar: tipos de notificación -->
+        <div class="type-sidebar">
+            <div class="sidebar-title">Categorías</div>
+
+            <!-- Todas -->
+            <button class="type-item" [class.active]="selectedTypeId() === null" (click)="selectType(null)">
+                <div class="type-item-icon" style="background:rgba(100,116,139,0.12)">
+                    <i class="pi pi-th-large" style="color:#64748b"></i>
+                </div>
+                <div class="type-item-info">
+                    <span class="type-item-name">Todas</span>
+                    <span class="type-item-count">{{ stats()?.total ?? 0 }} notificaciones</span>
+                </div>
+                @if (stats()?.unread > 0) {
+                <span class="type-unread-dot">{{ stats().unread }}</span>
+                }
+            </button>
+
+            @for (type of types(); track type.idNotificationType) {
+            <button class="type-item" [class.active]="selectedTypeId() === type.idNotificationType"
+                (click)="selectType(type.idNotificationType)">
+                <div class="type-item-icon" [style.background]="type.color + '1a'">
+                    <i class="pi" [class]="type.icon" [style.color]="type.color"></i>
+                </div>
+                <div class="type-item-info">
+                    <span class="type-item-name">{{ type.name }}</span>
+                    <span class="type-item-count">
+                        {{ stats()?.byType | typeCount: type.idNotificationType }} notificaciones
+                    </span>
+                </div>
+                @if (getUnreadCount(type.idNotificationType) > 0) {
+                <span class="type-unread-dot">{{ getUnreadCount(type.idNotificationType) }}</span>
+                }
+            </button>
+            }
+        </div>
+
+        <!-- Panel principal -->
+        <div class="notif-main">
+
+            <!-- Filtros -->
+            <div class="filter-bar">
+                <div class="filter-search">
+                    <i class="pi pi-search"></i>
+                    <input type="text" placeholder="Buscar notificación..." [(ngModel)]="searchText"
+                        (input)="onSearch()" />
+                </div>
+                <p-select [options]="priorityOptions" [(ngModel)]="filterPriority" optionLabel="label"
+                    optionValue="value" placeholder="Prioridad" (onChange)="onFilter()" styleClass="filter-sel" />
+                <p-select [options]="readOptions" [(ngModel)]="filterRead" optionLabel="label" optionValue="value"
+                    placeholder="Estado" (onChange)="onFilter()" styleClass="filter-sel" />
+                @if (hasFilters) {
+                <button pButton icon="pi pi-times" severity="secondary" pTooltip="Limpiar filtros"
+                    (click)="clearFilters()"></button>
+                }
+            </div>
+
+            <!-- Lista de notificaciones -->
+            @if (loadingNotifs()) {
+            <div class="flex flex-col gap-2">
+                @for (i of [1,2,3,4,5]; track i) { <p-skeleton height="5rem" /> }
+            </div>
+            } @else if (notifications().length === 0) {
+            <div class="empty-state">
+                <i class="pi pi-bell-slash"></i>
+                <p>No hay notificaciones en esta categoría</p>
+            </div>
+            } @else {
+            <div class="notif-list">
+                @for (notif of notifications(); track notif.idNotification) {
+                <div class="notif-item" [class.unread]="!notif.isRead"
+                    [class.priority-critical]="notif.priority === 'CRITICAL'" (click)="openDetail(notif)">
+
+                    <!-- Indicador de tipo -->
+                    <div class="notif-type-bar" [style.background]="notif.typeColor ?? '#6366f1'"></div>
+
+                    <!-- Ícono -->
+                    <div class="notif-icon" [style.background]="(notif.typeColor ?? '#6366f1') + '18'">
+                        <i class="pi" [class]="notif.typeIcon ?? 'pi-bell'"
+                            [style.color]="notif.typeColor ?? '#6366f1'"></i>
+                    </div>
+
+                    <!-- Contenido -->
+                    <div class="notif-content">
+                        <div class="notif-content-top">
+                            <span class="notif-type-label">{{ notif.typeName }}</span>
+                            <div class="notif-badges">
+                                <p-tag [value]="getPriorityLabel(notif.priority)"
+                                    [severity]="getPrioritySeverity(notif.priority)" styleClass="text-xs" />
+                                @if (!notif.isSent) {
+                                <p-tag value="Borrador" severity="secondary" styleClass="text-xs" />
+                                }
+                                @if (notif.targetName) {
+                                <span class="notif-target-chip">
+                                    <i class="pi pi-user"></i> {{ notif.targetName }}
+                                </span>
+                                }
+                            </div>
+                        </div>
+                        <span class="notif-title">{{ notif.title }}</span>
+                        <span class="notif-body">{{ notif.body }}</span>
+                        <div class="notif-meta">
+                            <span><i class="pi pi-user"></i> {{ notif.createdByName }}</span>
+                            <span><i class="pi pi-clock"></i> {{ notif.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                            <span class="scope-chip">
+                                <i class="pi pi-globe"></i> {{ getScopeLabel(notif.scope) }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Acciones -->
+                    <div class="notif-actions" (click)="$event.stopPropagation()">
+                        @if (!notif.isRead) {
+                        <div class="unread-indicator" pTooltip="No leída"></div>
+                        }
+                        <button pButton [icon]="notif.isRead ? 'pi pi-envelope' : 'pi pi-envelope-open'"
+                            severity="secondary" [text]="true"
+                            [pTooltip]="notif.isRead ? 'Marcar no leída' : 'Marcar leída'"
+                            (click)="toggleRead(notif, $event)"></button>
+                        <button pButton icon="pi pi-trash" severity="danger" [text]="true" pTooltip="Eliminar"
+                            (click)="confirmDelete(notif, $event)"></button>
+                    </div>
+                </div>
+                }
+            </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- MODAL: DETALLE DE NOTIFICACIÓN                                            -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<p-dialog header="Detalle de notificación" [(visible)]="showDetail" [modal]="true" [draggable]="false"
+    [style]="{ width: '620px' }" (onHide)="selectedNotif.set(null)">
+    @if (selectedNotif(); as notif) {
+    <div class="detail-content">
+        <!-- Header tipo -->
+        <div class="detail-type-header" [style.border-left-color]="notif.typeColor ?? '#6366f1'">
+            <div class="detail-type-pill" [style.background]="(notif.typeColor ?? '#6366f1') + '1a'"
+                [style.color]="notif.typeColor ?? '#6366f1'">
+                <i class="pi" [class]="notif.typeIcon ?? 'pi-bell'"></i>
+                {{ notif.typeName }}
+            </div>
+            <p-tag [value]="getPriorityLabel(notif.priority)" [severity]="getPrioritySeverity(notif.priority)" />
+            @if (!notif.isSent) {
+            <p-tag value="Borrador" severity="secondary" />
+            }
+        </div>
+
+        <!-- Título -->
+        <h2 class="detail-title">{{ notif.title }}</h2>
+
+        <!-- Cuerpo -->
+        <div class="detail-body">{{ notif.body }}</div>
+
+        <!-- Metadata -->
+        <div class="detail-meta-grid">
+            <div class="detail-meta-item">
+                <i class="pi pi-globe"></i>
+                <div>
+                    <span class="dm-label">Alcance</span>
+                    <span class="dm-value">{{ getScopeLabel(notif.scope) }}</span>
+                </div>
+            </div>
+            @if (notif.targetName) {
+            <div class="detail-meta-item">
+                <i class="pi pi-user"></i>
+                <div>
+                    <span class="dm-label">Destinatario</span>
+                    <span class="dm-value">{{ notif.targetName }}</span>
+                </div>
+            </div>
+            }
+            <div class="detail-meta-item">
+                <i class="pi pi-user-edit"></i>
+                <div>
+                    <span class="dm-label">Creado por</span>
+                    <span class="dm-value">{{ notif.createdByName }}</span>
+                </div>
+            </div>
+            <div class="detail-meta-item">
+                <i class="pi pi-calendar-plus"></i>
+                <div>
+                    <span class="dm-label">Fecha de creación</span>
+                    <span class="dm-value">{{ notif.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                </div>
+            </div>
+            @if (notif.sentAt) {
+            <div class="detail-meta-item">
+                <i class="pi pi-send"></i>
+                <div>
+                    <span class="dm-label">Enviado</span>
+                    <span class="dm-value">{{ notif.sentAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                </div>
+            </div>
+            }
+            <div class="detail-meta-item">
+                <i class="pi pi-eye"></i>
+                <div>
+                    <span class="dm-label">Estado lectura</span>
+                    <span class="dm-value">{{ notif.isRead ? 'Leída' : 'No leída' }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    }
+    <ng-template pTemplate="footer">
+        <button pButton label="Cerrar" severity="secondary" [outlined]="true" (click)="showDetail.set(false)"></button>
+        @if (selectedNotif()) {
+        <button pButton [label]="selectedNotif()!.isRead ? 'Marcar no leída' : 'Marcar leída'"
+            [icon]="selectedNotif()!.isRead ? 'pi pi-envelope' : 'pi pi-envelope-open'" severity="secondary"
+            (click)="toggleRead(selectedNotif()!, $event); showDetail.set(false)"></button>
+        <button pButton label="Eliminar" icon="pi pi-trash" severity="danger"
+            (click)="confirmDelete(selectedNotif()!, $event); showDetail.set(false)"></button>
+        }
+    </ng-template>
+</p-dialog>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- MODAL: CREAR / ENVIAR NOTIFICACIÓN                                        -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<p-dialog header="Nueva Notificación" [(visible)]="showCreateForm" [modal]="true" [draggable]="false"
+    [style]="{ width: '680px' }">
+    <form [formGroup]="createForm" class="create-form">
+
+        <div class="form-row">
+            <div class="form-field">
+                <label>Tipo <span class="req">*</span></label>
+                <p-select formControlName="idNotificationType" [options]="typeFormOptions" optionLabel="label"
+                    optionValue="value" placeholder="Seleccionar tipo" styleClass="w-full" />
+                @if (isFieldInvalid('idNotificationType')) { <small class="error">Requerido</small> }
+            </div>
+            <div class="form-field">
+                <label>Prioridad <span class="req">*</span></label>
+                <p-select formControlName="priority" [options]="priorityFormOptions" optionLabel="label"
+                    optionValue="value" styleClass="w-full" />
+            </div>
+        </div>
+
+        <div class="form-field">
+            <label>Título <span class="req">*</span></label>
+            <input pInputText formControlName="title" placeholder="Ej: Reunión de padres — Marzo 2025" />
+            @if (isFieldInvalid('title')) { <small class="error">Requerido</small> }
+        </div>
+
+        <div class="form-field">
+            <label>Mensaje <span class="req">*</span></label>
+            <textarea pTextarea formControlName="body" rows="4" placeholder="Escriba el contenido de la notificación..."
+                style="resize:none; width:100%"></textarea>
+            @if (isFieldInvalid('body')) { <small class="error">Requerido</small> }
+        </div>
+
+        <div class="form-row">
+            <div class="form-field">
+                <label>Alcance <span class="req">*</span></label>
+                <p-select formControlName="scope" [options]="scopeOptions" optionLabel="label" optionValue="value"
+                    styleClass="w-full" />
+            </div>
+            @if (showTargetSelector) {
+            <div class="form-field">
+                <label>Destinatario</label>
+                <p-select formControlName="idTarget" [options]="targetOptions" optionLabel="label" optionValue="value"
+                    placeholder="Seleccionar..." [filter]="true" filterPlaceholder="Buscar..." styleClass="w-full" />
+            </div>
+            }
+        </div>
+
+        <div class="send-row">
+            <div class="send-toggle">
+                <p-toggleswitch formControlName="sendNow" />
+                <div>
+                    <span class="send-toggle-label">Enviar ahora</span>
+                    <span class="send-toggle-desc">
+                        {{ createForm.get('sendNow')?.value
+                        ? 'La notificación se enviará inmediatamente al guardar'
+                        : 'Se guardará como borrador sin enviar' }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+    </form>
+    <ng-template pTemplate="footer">
+        <button pButton label="Cancelar" severity="secondary" [outlined]="true"
+            (click)="showCreateForm.set(false)"></button>
+        <button pButton [label]="createForm.get('sendNow')?.value ? 'Crear y enviar' : 'Guardar borrador'"
+            [icon]="createForm.get('sendNow')?.value ? 'pi pi-send' : 'pi pi-save'" [loading]="savingNotif()"
+            (click)="submitCreate()"></button>
+    </ng-template>
+</p-dialog>
+
+<p-confirmDialog />
+<p-toast position="top-right" />

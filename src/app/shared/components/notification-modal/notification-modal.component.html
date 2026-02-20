@@ -1,0 +1,10 @@
+@if (visible) {
+  <div class="notification-modal" [ngClass]="[tipo, animateOut ? 'fade-out' : '']">
+    <div class="modal-content">
+      @if (imagen) {
+        <img [src]="imagen" alt="imagen" />
+      }
+      <p>{{ mensaje }}</p>
+    </div>
+  </div>
+}

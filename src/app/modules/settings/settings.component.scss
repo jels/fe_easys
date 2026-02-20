@@ -1,0 +1,627 @@
+// src/app/modules/settings/settings.component.scss
+:host {
+    display: block;
+}
+.settings-page {
+    animation: fadeIn 0.4s ease-out;
+}
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+// ── Page Header ───────────────────────────────────────────────────────────────
+.page-header {
+    margin-bottom: 1.5rem;
+}
+.page-header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+.page-title {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: var(--surface-900);
+    margin: 0 0 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    i {
+        color: var(--primary-color);
+    }
+}
+.page-subtitle {
+    color: var(--text-color-secondary);
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.stat-card {
+    background: var(--surface-card);
+    border-radius: 0.75rem;
+    padding: 1.1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: var(--card-shadow);
+    border-left: 4px solid var(--surface-300);
+    transition: transform 0.2s;
+    &:hover {
+        transform: translateY(-2px);
+    }
+    &.demo-active {
+        border-left-color: #f59e0b;
+    }
+}
+.stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 0.6rem;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface-100);
+    i {
+        font-size: 1.2rem;
+        color: var(--primary-color);
+    }
+}
+.stat-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.05rem;
+    flex: 1;
+    min-width: 0;
+}
+.stat-value {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--surface-900);
+    &.year-name {
+        font-size: 0.9rem;
+    }
+}
+.stat-label {
+    font-size: 0.75rem;
+    color: var(--text-color-secondary);
+    font-weight: 500;
+}
+.stat-sub {
+    font-size: 0.72rem;
+    color: var(--text-color-secondary);
+}
+
+// ── Tabs Card ─────────────────────────────────────────────────────────────────
+.tabs-card {
+    background: var(--surface-card);
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    box-shadow: var(--card-shadow);
+}
+.tab-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--surface-200);
+}
+.tab-section-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-color-secondary);
+}
+.panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--surface-200);
+}
+
+// ── Tab 0: Empresa ────────────────────────────────────────────────────────────
+.company-view {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+.company-view-header {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+}
+.company-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 0.75rem;
+    flex-shrink: 0;
+    background: var(--primary-100, #e0e7ff);
+    color: var(--primary-700, #3730a3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 800;
+}
+.company-name {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--surface-900);
+    margin: 0 0 0.1rem;
+}
+.company-trade {
+    font-size: 0.85rem;
+    color: var(--text-color-secondary);
+}
+
+.company-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+.company-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.75rem 1rem;
+    background: var(--surface-50);
+    border-radius: 0.5rem;
+    &.col-span-2 {
+        grid-column: span 2;
+    }
+}
+.info-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-color-secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    i {
+        font-size: 0.7rem;
+    }
+}
+.info-value {
+    font-weight: 600;
+    color: var(--surface-900);
+    font-size: 0.875rem;
+}
+
+.company-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+.form-section-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-color-secondary);
+    margin-bottom: 0.25rem;
+}
+
+// ── Tab 1: Sucursales ─────────────────────────────────────────────────────────
+.branches-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+.branch-card {
+    border: 2px solid var(--surface-200);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    transition: box-shadow 0.2s;
+    &:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+    &.branch-main {
+        border-color: var(--primary-300, #a5b4fc);
+        background: rgba(99, 102, 241, 0.02);
+    }
+}
+.branch-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.branch-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 0.5rem;
+    flex-shrink: 0;
+    background: var(--primary-50, rgba(99, 102, 241, 0.08));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    i {
+        color: var(--primary-color);
+        font-size: 1rem;
+    }
+}
+.branch-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+.branch-name {
+    font-weight: 700;
+    color: var(--surface-900);
+    font-size: 0.9rem;
+}
+.branch-code {
+    font-size: 0.72rem;
+    color: var(--text-color-secondary);
+}
+.branch-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    font-size: 0.78rem;
+    color: var(--text-color-secondary);
+    span {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+    i {
+        font-size: 0.7rem;
+    }
+}
+.branch-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.25rem;
+}
+
+// ── Tab 2: Año lectivo ────────────────────────────────────────────────────────
+.year-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 1.25rem;
+    min-height: 350px;
+}
+.year-list-panel {
+    border: 1px solid var(--surface-200);
+    border-radius: 0.65rem;
+    overflow: hidden;
+}
+.year-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    border-bottom: 1px solid var(--surface-100);
+    transition: background 0.15s;
+    &:hover {
+        background: var(--surface-50);
+    }
+    &.selected {
+        background: rgba(99, 102, 241, 0.06);
+        border-left: 3px solid var(--primary-color);
+    }
+}
+.year-item-left {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+.year-item-name {
+    font-weight: 700;
+    color: var(--surface-900);
+    font-size: 0.875rem;
+}
+.year-item-dates {
+    font-size: 0.68rem;
+    color: var(--text-color-secondary);
+}
+.year-item-right {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+.period-panel {
+    display: flex;
+    flex-direction: column;
+}
+
+.periods-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.period-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--surface-200);
+    border-radius: 0.5rem;
+    background: var(--surface-50);
+    &.period-active {
+        border-color: var(--green-300, #86efac);
+        background: rgba(34, 197, 94, 0.03);
+    }
+}
+.period-num {
+    font-size: 1.25rem;
+    font-weight: 900;
+    color: var(--primary-color);
+    min-width: 30px;
+}
+.period-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+.period-name {
+    font-weight: 700;
+    color: var(--surface-900);
+    font-size: 0.875rem;
+}
+.period-dates {
+    font-size: 0.72rem;
+    color: var(--text-color-secondary);
+}
+.period-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+// ── Tab 3: Parámetros ─────────────────────────────────────────────────────────
+.param-categories {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--surface-200);
+}
+.param-cat-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.9rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--surface-300);
+    background: var(--surface-50);
+    color: var(--text-color-secondary);
+    cursor: pointer;
+    font-size: 0.78rem;
+    font-weight: 600;
+    transition: all 0.15s;
+    &:hover {
+        background: var(--surface-100);
+    }
+    &.active {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+        i {
+            color: white;
+        }
+    }
+    i {
+        font-size: 0.8rem;
+        color: var(--text-color-secondary);
+    }
+}
+
+.params-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+.param-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--surface-200);
+    border-radius: 0.5rem;
+    background: var(--surface-50);
+    transition: border-color 0.2s;
+    &.param-editing {
+        border-color: var(--primary-300, #a5b4fc);
+        background: rgba(99, 102, 241, 0.02);
+    }
+}
+.param-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    flex: 1;
+    min-width: 0;
+}
+.param-label {
+    font-weight: 700;
+    color: var(--surface-900);
+    font-size: 0.875rem;
+}
+.param-desc {
+    font-size: 0.72rem;
+    color: var(--text-color-secondary);
+}
+.param-key {
+    font-size: 0.65rem;
+    color: var(--text-color-secondary);
+}
+
+.param-value-area {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+.param-current-value {
+    font-weight: 700;
+    font-size: 0.875rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 0.35rem;
+    border: 1px solid var(--surface-300);
+    background: white;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 100px;
+    justify-content: center;
+    &.value-bool-true {
+        color: #15803d;
+        border-color: rgba(22, 163, 74, 0.3);
+        background: rgba(22, 163, 74, 0.06);
+    }
+    &.value-bool-false {
+        color: #dc2626;
+        border-color: rgba(220, 38, 38, 0.3);
+        background: rgba(220, 38, 38, 0.06);
+    }
+}
+.param-input {
+    width: 120px;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid var(--primary-color);
+    border-radius: 0.35rem;
+    outline: none;
+    font-size: 0.875rem;
+}
+.param-select {
+    min-width: 130px;
+}
+.param-edit-actions {
+    display: flex;
+    gap: 0.1rem;
+}
+.param-readonly-badge {
+    font-size: 0.7rem;
+    color: var(--text-color-secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    i {
+        font-size: 0.65rem;
+    }
+}
+
+// ── Forms (shared) ────────────────────────────────────────────────────────────
+.modal-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.form-row {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    flex: 1;
+    min-width: 140px;
+}
+.form-field-2x {
+    flex: 2;
+    min-width: 220px;
+}
+.toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+}
+label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-color-secondary);
+}
+.req {
+    color: #ef4444;
+}
+.error {
+    color: #ef4444;
+    font-size: 0.72rem;
+}
+.mono {
+    font-family: 'Courier New', monospace;
+}
+
+// ── Empty ─────────────────────────────────────────────────────────────────────
+.empty-tab {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-color-secondary);
+    i {
+        font-size: 2.5rem;
+        display: block;
+        margin-bottom: 0.75rem;
+        color: var(--surface-300);
+    }
+    p {
+        margin: 0;
+        font-size: 0.9rem;
+    }
+}
+
+// ── Responsive ────────────────────────────────────────────────────────────────
+@media (max-width: 1024px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    .year-layout {
+        grid-template-columns: 1fr;
+    }
+    .company-info-grid {
+        grid-template-columns: 1fr;
+        .col-span-2 {
+            grid-column: span 1;
+        }
+    }
+}
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}

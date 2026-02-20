@@ -1,0 +1,154 @@
+@if (loading()) {
+<div class="card">
+    <div class="flex gap-4 mb-6">
+        <p-skeleton shape="circle" size="5rem" />
+        <div class="flex flex-col gap-2 flex-1">
+            <p-skeleton height="2rem" width="40%" />
+            <p-skeleton height="1.5rem" width="25%" />
+        </div>
+    </div>
+    @for (i of [1,2,3]; track i) {
+    <p-skeleton height="3rem" class="mb-3" />
+    }
+</div>
+} @else if (staff()) {
+<!-- Header -->
+<div class="card mb-4">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+            <div class="w-16 h-16 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center">
+                <i class="pi pi-id-card text-2xl text-primary-600 dark:text-primary-400"></i>
+            </div>
+            <div>
+                <h2 class="text-2xl font-bold text-surface-900 dark:text-surface-0 m-0">{{ getFullName() }}</h2>
+                <div class="flex items-center gap-3 mt-1 flex-wrap">
+                    <span class="text-muted-color font-mono text-sm">{{ staff()!.employeeNumber }}</span>
+                    <p-tag [value]="getTypeLabel(staff()!.staffType)"
+                        [severity]="getTypeSeverity(staff()!.staffType)" />
+                    <p-tag [value]="getStatusLabel(staff()!.status)" [severity]="getStatusSeverity(staff()!.status)" />
+                </div>
+                @if (staff()!.position) {
+                <p class="text-muted-color mt-1 mb-0 text-sm">{{ staff()!.position }}{{ staff()!.department ? ' — ' +
+                    staff()!.department : '' }}</p>
+                }
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <p-button label="Editar" icon="pi pi-pencil" severity="secondary" (onClick)="goToEdit()" />
+            <p-button label="Volver" icon="pi pi-arrow-left" [text]="true" severity="secondary" (onClick)="goBack()" />
+        </div>
+    </div>
+</div>
+
+<!-- Tabs -->
+<div class="card">
+    <p-tabs>
+        <p-tablist>
+            <p-tab value="0"><i class="pi pi-user mr-2"></i> Datos Personales</p-tab>
+            <p-tab value="1"><i class="pi pi-briefcase mr-2"></i> Datos Laborales</p-tab>
+        </p-tablist>
+
+        <p-tabpanels>
+            <!-- Tab Datos Personales -->
+            <p-tabpanel value="0">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
+                    <div class="detail-field">
+                        <span class="field-label">Nombres</span>
+                        <span class="field-value">{{ staff()!.person?.firstName ?? '—' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Apellidos</span>
+                        <span class="field-value">{{ staff()!.person?.lastName ?? '—' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Tipo Documento</span>
+                        <span class="field-value">{{ staff()!.person?.documentType ?? '—' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Nro. Documento</span>
+                        <span class="field-value font-mono">{{ staff()!.person?.documentNumber ?? '—' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Fecha de Nacimiento</span>
+                        <span class="field-value">{{ staff()!.person?.birthDate ?? '—' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Género</span>
+                        <span class="field-value">{{ staff()!.person?.gender ?? '—' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Grupo Sanguíneo</span>
+                        <span class="field-value">{{ staff()!.person?.bloodType ?? '—' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Teléfono</span>
+                        <span class="field-value">{{ staff()!.person?.phone ?? '—' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Celular</span>
+                        <span class="field-value">{{ staff()!.person?.mobilePhone ?? '—' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Email</span>
+                        <span class="field-value">{{ staff()!.person?.email ?? '—' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Ciudad</span>
+                        <span class="field-value">{{ staff()!.person?.city ?? '—' }}</span>
+                    </div>
+                    <div class="detail-field md:col-span-2">
+                        <span class="field-label">Dirección</span>
+                        <span class="field-value">{{ staff()!.person?.address ?? '—' }}</span>
+                    </div>
+                </div>
+            </p-tabpanel>
+
+            <!-- Tab Datos Laborales -->
+            <p-tabpanel value="1">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
+                    <div class="detail-field">
+                        <span class="field-label">Nro. de Legajo</span>
+                        <span class="field-value font-mono">{{ staff()!.employeeNumber }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Fecha de Contratación</span>
+                        <span class="field-value">{{ staff()!.hireDate }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Tipo</span>
+                        <p-tag [value]="getTypeLabel(staff()!.staffType)"
+                            [severity]="getTypeSeverity(staff()!.staffType)" />
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Estado</span>
+                        <p-tag [value]="getStatusLabel(staff()!.status)"
+                            [severity]="getStatusSeverity(staff()!.status)" />
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Cargo</span>
+                        <span class="field-value">{{ staff()!.position ?? '—' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Departamento</span>
+                        <span class="field-value">{{ staff()!.department ?? '—' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Especialización</span>
+                        <span class="field-value">{{ staff()!.specialization ?? '—' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Sucursal</span>
+                        <span class="field-value">{{ staff()!.branchName ?? '—' }}</span>
+                    </div>
+                    @if (staff()!.terminationDate) {
+                    <div class="detail-field">
+                        <span class="field-label">Fecha de Desvinculación</span>
+                        <span class="field-value">{{ staff()!.terminationDate }}</span>
+                    </div>
+                    }
+                </div>
+            </p-tabpanel>
+        </p-tabpanels>
+    </p-tabs>
+</div>
+}

@@ -1,0 +1,430 @@
+// src/app/modules/access-control/access-control.component.scss
+
+:host {
+    display: block;
+}
+
+.access-page {
+    animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+// ── Page Header ───────────────────────────────────────────────────────────────
+.page-header {
+    margin-bottom: 1.5rem;
+}
+
+.page-header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.page-title-section {
+    flex: 1;
+}
+
+.page-title {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: var(--surface-900);
+    margin: 0 0 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    i {
+        color: var(--primary-color);
+    }
+}
+
+.page-subtitle {
+    color: var(--text-color-secondary);
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+// ── Stats Grid ────────────────────────────────────────────────────────────────
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-card {
+    background: var(--surface-card);
+    border-radius: 0.75rem;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    box-shadow: var(--card-shadow);
+    border-left: 4px solid transparent;
+    transition: transform 0.2s ease;
+
+    &:hover {
+        transform: translateY(-2px);
+    }
+
+    &.stat-present {
+        border-left-color: var(--green-500, #22c55e);
+    }
+    &.stat-absent {
+        border-left-color: var(--red-500, #ef4444);
+    }
+    &.stat-late {
+        border-left-color: var(--orange-500, #f97316);
+    }
+    &.stat-staff {
+        border-left-color: var(--blue-500, #3b82f6);
+    }
+    &.stat-departure {
+        border-left-color: var(--yellow-500, #eab308);
+    }
+    &.stat-infraction {
+        border-left-color: var(--purple-500, #a855f7);
+    }
+}
+
+.stat-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 0.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    i {
+        font-size: 1.15rem;
+    }
+
+    .stat-present & {
+        background: rgba(34, 197, 94, 0.12);
+        i {
+            color: #16a34a;
+        }
+    }
+    .stat-absent & {
+        background: rgba(239, 68, 68, 0.12);
+        i {
+            color: #dc2626;
+        }
+    }
+    .stat-late & {
+        background: rgba(249, 115, 22, 0.12);
+        i {
+            color: #ea580c;
+        }
+    }
+    .stat-staff & {
+        background: rgba(59, 130, 246, 0.12);
+        i {
+            color: #2563eb;
+        }
+    }
+    .stat-departure & {
+        background: rgba(234, 179, 8, 0.12);
+        i {
+            color: #ca8a04;
+        }
+    }
+    .stat-infraction & {
+        background: rgba(168, 85, 247, 0.12);
+        i {
+            color: #9333ea;
+        }
+    }
+}
+
+.stat-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--surface-900);
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: var(--text-color-secondary);
+    font-weight: 500;
+}
+
+// ── Tabs Card ─────────────────────────────────────────────────────────────────
+.tabs-card {
+    background: var(--surface-card);
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    box-shadow: var(--card-shadow);
+}
+
+// Badge sobre los tabs
+.tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    margin-left: 5px;
+    background: var(--primary-color);
+    color: white;
+
+    &.tab-badge-green {
+        background: var(--green-500, #22c55e);
+    }
+    &.tab-badge-red {
+        background: var(--red-500, #ef4444);
+    }
+    &.tab-badge-orange {
+        background: var(--orange-500, #f97316);
+    }
+}
+
+// ── Tab Toolbar ───────────────────────────────────────────────────────────────
+.tab-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding: 0.75rem 0;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.toolbar-left,
+.toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+// ── Table Row States ──────────────────────────────────────────────────────────
+::ng-deep {
+    .row-absent td {
+        background: rgba(239, 68, 68, 0.04) !important;
+    }
+    .row-late td {
+        background: rgba(249, 115, 22, 0.04) !important;
+    }
+    .row-resolved td {
+        opacity: 0.55;
+    }
+}
+
+// ── Person Cell ───────────────────────────────────────────────────────────────
+.person-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+.person-name {
+    font-weight: 600;
+    color: var(--surface-900);
+    font-size: 0.88rem;
+}
+.person-sub {
+    font-size: 0.75rem;
+    color: var(--text-color-secondary);
+}
+.mono {
+    font-family: 'Courier New', monospace;
+}
+
+// ── Grade Badge ───────────────────────────────────────────────────────────────
+.grade-badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    background: rgba(99, 102, 241, 0.1);
+    color: #6366f1;
+    border-radius: 0.35rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+// ── Time Value ────────────────────────────────────────────────────────────────
+.time-value {
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--surface-700);
+    &.time-late {
+        color: var(--orange-500, #f97316);
+    }
+}
+
+// ── Obs text ──────────────────────────────────────────────────────────────────
+.obs-text {
+    font-size: 0.8rem;
+    color: var(--text-color-secondary);
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+}
+
+// ── Absent Grid (cards) ───────────────────────────────────────────────────────
+.absent-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1rem;
+    padding-top: 0.75rem;
+}
+
+.absent-card {
+    border: 1px solid var(--red-200, #fecaca);
+    border-radius: 0.65rem;
+    padding: 0.85rem 1rem;
+    background: rgba(239, 68, 68, 0.04);
+    transition: box-shadow 0.2s ease;
+    &:hover {
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
+    }
+    &.justified {
+        border-color: var(--blue-200, #bfdbfe);
+        background: rgba(59, 130, 246, 0.04);
+        &:hover {
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        }
+    }
+}
+
+.absent-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.4rem;
+}
+
+.absent-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(239, 68, 68, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    i {
+        color: var(--red-500, #ef4444);
+    }
+    .justified & {
+        background: rgba(59, 130, 246, 0.12);
+        i {
+            color: var(--blue-500, #3b82f6);
+        }
+    }
+}
+
+.absent-info {
+    flex: 1;
+    min-width: 0;
+}
+.absent-name {
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: var(--surface-900);
+}
+.absent-sub {
+    font-size: 0.75rem;
+    color: var(--text-color-secondary);
+}
+.absent-grade {
+    font-size: 0.78rem;
+    color: var(--text-color-secondary);
+    margin-top: 0.2rem;
+}
+.absent-obs {
+    font-size: 0.78rem;
+    color: var(--text-color-secondary);
+    font-style: italic;
+    margin-top: 0.35rem;
+    padding-top: 0.35rem;
+    border-top: 1px solid var(--surface-200);
+}
+
+// ── Empty Tab ─────────────────────────────────────────────────────────────────
+.empty-tab {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-color-secondary);
+    i {
+        font-size: 2.5rem;
+        display: block;
+        margin-bottom: 0.75rem;
+        color: var(--surface-300);
+    }
+    p {
+        margin: 0 0 1rem;
+        font-size: 0.9rem;
+    }
+    &.success-empty {
+        i {
+            color: var(--green-400, #4ade80);
+        }
+        p {
+            color: var(--green-700, #15803d);
+            font-weight: 500;
+        }
+    }
+}
+
+// ── Responsive ────────────────────────────────────────────────────────────────
+@media (max-width: 1280px) {
+    .stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .page-header-content {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .header-actions {
+        justify-content: flex-end;
+    }
+    .tab-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .toolbar-right {
+        justify-content: flex-end;
+    }
+}
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}

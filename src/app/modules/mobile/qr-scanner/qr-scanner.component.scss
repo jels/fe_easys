@@ -1,0 +1,378 @@
+// src/app/modules/mobile/qr-scanner/qr-scanner.component.scss
+:host {
+    display: block;
+    height: 100dvh;
+    overflow: hidden;
+}
+
+.scanner-page {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    background: #0f0f0f;
+    color: white;
+    --mode-color: #22c55e;
+    overflow: hidden;
+}
+
+// ── Header ────────────────────────────────────────────────────────────────────
+.scanner-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+}
+.btn-back {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    line-height: 1;
+    &:active {
+        background: rgba(255, 255, 255, 0.15);
+    }
+}
+.header-center {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.header-mode-icon {
+    font-size: 1.2rem;
+}
+.header-title {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.scan-counter {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 0.5rem;
+    padding: 0.3rem 0.65rem;
+}
+.count-num {
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: var(--mode-color);
+    line-height: 1;
+}
+.count-lbl {
+    font-size: 0.58rem;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+// ── Mode Selector ─────────────────────────────────────────────────────────────
+.mode-selector {
+    display: flex;
+    gap: 0.4rem;
+    padding: 0.65rem 1rem;
+    background: rgba(0, 0, 0, 0.4);
+    flex-shrink: 0;
+}
+.mode-btn {
+    flex: 1;
+    padding: 0.55rem 0;
+    border-radius: 0.55rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    transition: all 0.2s;
+    &.active {
+        background: var(--mode-color);
+        color: #0f0f0f;
+        border-color: var(--mode-color);
+        font-weight: 800;
+    }
+    span {
+        font-size: 0.9rem;
+    }
+}
+
+// ── Viewport ──────────────────────────────────────────────────────────────────
+.scanner-viewport {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: #000;
+    min-height: 0;
+    transition: background 0.1s;
+    &.flash-green {
+        animation: flashGreen 0.6s ease-out;
+    }
+}
+@keyframes flashGreen {
+    0% {
+        box-shadow: inset 0 0 0 8px rgba(34, 197, 94, 0.8);
+    }
+    100% {
+        box-shadow: inset 0 0 0 0 rgba(34, 197, 94, 0);
+    }
+}
+
+.no-camera {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+.no-camera-icon {
+    font-size: 3rem;
+}
+.no-camera p {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: white;
+}
+.no-camera small {
+    font-size: 0.8rem;
+}
+
+// Scanner fill
+zxing-scanner {
+    display: block;
+    width: 100%;
+    height: 100%;
+    ::ng-deep video {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover;
+    }
+}
+
+// ── Scan Frame ────────────────────────────────────────────────────────────────
+.scan-frame {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -55%);
+    width: min(260px, 70vw);
+    height: min(260px, 70vw);
+    pointer-events: none;
+}
+.corner {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border-color: var(--mode-color);
+    border-style: solid;
+    border-width: 0;
+    &.tl {
+        top: 0;
+        left: 0;
+        border-top-width: 3px;
+        border-left-width: 3px;
+        border-top-left-radius: 4px;
+    }
+    &.tr {
+        top: 0;
+        right: 0;
+        border-top-width: 3px;
+        border-right-width: 3px;
+        border-top-right-radius: 4px;
+    }
+    &.bl {
+        bottom: 0;
+        left: 0;
+        border-bottom-width: 3px;
+        border-left-width: 3px;
+        border-bottom-left-radius: 4px;
+    }
+    &.br {
+        bottom: 0;
+        right: 0;
+        border-bottom-width: 3px;
+        border-right-width: 3px;
+        border-bottom-right-radius: 4px;
+    }
+}
+.scan-line {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    height: 2px;
+    background: var(--mode-color);
+    box-shadow: 0 0 8px var(--mode-color);
+    animation: scanMove 2s linear infinite;
+}
+@keyframes scanMove {
+    0% {
+        top: 8px;
+    }
+    50% {
+        top: calc(100% - 10px);
+    }
+    100% {
+        top: 8px;
+    }
+}
+.scan-hint {
+    position: absolute;
+    bottom: 1rem;
+    left: 0;
+    right: 0;
+    text-align: center;
+    span {
+        background: rgba(0, 0, 0, 0.6);
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.78rem;
+        padding: 0.35rem 0.85rem;
+        border-radius: 999px;
+        backdrop-filter: blur(4px);
+    }
+}
+
+// ── Feedback Overlay ──────────────────────────────────────────────────────────
+.feedback-overlay {
+    position: absolute;
+    left: 1rem;
+    right: 1rem;
+    bottom: 5rem;
+    border-radius: 1rem;
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    backdrop-filter: blur(12px);
+    animation: slideUp 0.25s ease-out;
+    z-index: 10;
+    &.feedback-success {
+        background: rgba(34, 197, 94, 0.2);
+        border: 1px solid rgba(34, 197, 94, 0.4);
+    }
+    &.feedback-error {
+        background: rgba(239, 68, 68, 0.2);
+        border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+}
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+.feedback-icon {
+    font-size: 2rem;
+}
+.feedback-name {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: white;
+    text-align: center;
+}
+.feedback-grade {
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+.feedback-type-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.6);
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+}
+.feedback-message {
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin-top: 0.1rem;
+}
+
+// ── Session Log ───────────────────────────────────────────────────────────────
+.session-log {
+    flex-shrink: 0;
+    max-height: 130px;
+    overflow-y: auto;
+    background: rgba(255, 255, 255, 0.03);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 0.5rem 1rem;
+}
+.session-log-title {
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgba(255, 255, 255, 0.3);
+    margin-bottom: 0.4rem;
+}
+.session-log-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+.log-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+.log-icon {
+    font-size: 0.7rem;
+}
+.log-name {
+    flex: 1;
+}
+.log-time {
+    font-family: monospace;
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.35);
+}
+.log-success .log-icon {
+    color: #22c55e;
+}
+
+// ── Footer ────────────────────────────────────────────────────────────────────
+.scanner-footer {
+    padding: 0.85rem 1rem;
+    flex-shrink: 0;
+    background: rgba(0, 0, 0, 0.6);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.btn-finalize {
+    width: 100%;
+    padding: 0.9rem;
+    border-radius: 0.75rem;
+    border: none;
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    transition: background 0.2s;
+    &:active {
+        background: rgba(239, 68, 68, 0.25);
+    }
+}

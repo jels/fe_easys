@@ -1,0 +1,255 @@
+// src/app/shared/components/parent/parent-detail-dialog/parent-detail-dialog.component.scss
+
+// ── Header ────────────────────────────────────────────────────────────────────
+.dialog-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.dialog-header-skeleton {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+}
+
+.parent-avatar-lg {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-400, #60a5fa), var(--primary-600, #2563eb));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    span {
+        font-size: 1rem;
+        font-weight: 700;
+        color: white;
+        letter-spacing: 0.05em;
+    }
+}
+
+.dialog-header-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.dialog-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--surface-900);
+    margin: 0 0 0.3rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dialog-header-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.doc-chip {
+    font-family: 'Courier New', monospace;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    background: var(--primary-50, rgba(59, 130, 246, 0.08));
+    padding: 0.1rem 0.4rem;
+    border-radius: 0.25rem;
+}
+
+// ── Detail Grid ───────────────────────────────────────────────────────────────
+.detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1.25rem 1.5rem;
+    padding-top: 1rem;
+}
+
+.detail-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    &.span-2 {
+        grid-column: span 2;
+    }
+    &.span-3 {
+        grid-column: span 3;
+    }
+}
+
+.field-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-color-secondary);
+}
+
+.field-value {
+    font-size: 0.9rem;
+    color: var(--text-color);
+    &.mono {
+        font-family: 'Courier New', monospace;
+    }
+}
+
+.mono {
+    font-family: 'Courier New', monospace;
+}
+.text-muted {
+    color: var(--text-color-secondary);
+    font-size: 0.8rem;
+}
+
+// ── Students Grid (cards) ─────────────────────────────────────────────────────
+.students-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+    padding-top: 1rem;
+}
+
+.student-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.9rem;
+    padding: 1rem;
+    border: 1px solid var(--surface-200);
+    border-radius: 0.75rem;
+    background: var(--surface-50, #f8fafc);
+    transition:
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
+
+    &:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        border-color: var(--primary-200, #bfdbfe);
+    }
+}
+
+.student-card-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--primary-50, rgba(59, 130, 246, 0.1));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    i {
+        font-size: 1.1rem;
+        color: var(--primary-color);
+    }
+}
+
+.student-card-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.student-card-name {
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: var(--surface-900);
+    margin-bottom: 0.15rem;
+}
+
+.student-card-sub {
+    font-size: 0.76rem;
+    color: var(--text-color-secondary);
+}
+
+.student-card-badges {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+    flex-shrink: 0;
+}
+
+// ── Payments Summary ──────────────────────────────────────────────────────────
+.payments-summary {
+    display: flex;
+    gap: 1.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--surface-50, #f8fafc);
+    border-radius: 0.5rem;
+    margin-top: 0.75rem;
+    border: 1px solid var(--surface-200);
+}
+
+.summary-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.summary-label {
+    font-size: 0.75rem;
+    color: var(--text-color-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+}
+
+.summary-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--surface-900);
+    &.success {
+        color: var(--green-600, #16a34a);
+    }
+}
+
+// ── Empty Tab ─────────────────────────────────────────────────────────────────
+.empty-tab {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-color-secondary);
+    i {
+        font-size: 2.5rem;
+        display: block;
+        margin-bottom: 0.75rem;
+        color: var(--surface-300);
+    }
+    p {
+        margin: 0;
+        font-size: 0.9rem;
+    }
+}
+
+// ── Responsive ────────────────────────────────────────────────────────────────
+@media (max-width: 768px) {
+    .detail-grid {
+        grid-template-columns: 1fr 1fr;
+        .span-2,
+        .span-3 {
+            grid-column: span 2;
+        }
+    }
+    .students-grid {
+        grid-template-columns: 1fr;
+    }
+    .payments-summary {
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .detail-grid {
+        grid-template-columns: 1fr;
+        .span-2,
+        .span-3 {
+            grid-column: span 1;
+        }
+    }
+}

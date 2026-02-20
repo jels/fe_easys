@@ -1,0 +1,264 @@
+<!-- src/app/modules/dashboard/dashboard.component.html -->
+<div class="dashboard-page">
+
+    <!-- ── Greeting Header ─────────────────────────────────────────────────── -->
+    <div class="dash-header">
+        <div class="dash-header-left">
+            <h1 class="dash-title">Panel de Control</h1>
+            <p class="dash-date">{{ currentDate }}</p>
+        </div>
+        @if (stats(); as s) {
+        <div class="dash-period-badge">
+            <i class="pi pi-calendar"></i>
+            <div>
+                <span class="period-badge-year">{{ s.activeYear }}</span>
+                <span class="period-badge-period">{{ s.activePeriod }}</span>
+            </div>
+        </div>
+        }
+    </div>
+
+    <!-- ── Stats Cards ─────────────────────────────────────────────────────── -->
+    @if (loadingStats()) {
+    <div class="stats-grid">
+        @for (i of [1,2,3,4,5,6]; track i) { <p-skeleton height="90px" borderRadius="0.75rem" /> }
+    </div>
+    } @else if (stats(); as s) {
+    <div class="stats-grid">
+        <div class="stat-card clickable" (click)="navigate('/sys/students')">
+            <div class="stat-icon-wrap" style="background:rgba(59,130,246,0.1)">
+                <i class="pi pi-users" style="color:#2563eb"></i>
+            </div>
+            <div class="stat-body">
+                <span class="stat-num">{{ s.students.active }}</span>
+                <span class="stat-lbl">Alumnos activos</span>
+                <span class="stat-sub">+{{ s.students.newThisMonth }} este mes</span>
+            </div>
+        </div>
+
+        <div class="stat-card clickable" (click)="navigate('/sys/staff')">
+            <div class="stat-icon-wrap" style="background:rgba(124,58,237,0.1)">
+                <i class="pi pi-briefcase" style="color:#7c3aed"></i>
+            </div>
+            <div class="stat-body">
+                <span class="stat-num">{{ s.staff.active }}</span>
+                <span class="stat-lbl">Personal activo</span>
+                <span class="stat-sub">{{ s.sections.total }} secciones</span>
+            </div>
+        </div>
+
+        <div class="stat-card clickable" (click)="navigate('/sys/access')">
+            <div class="stat-icon-wrap" style="background:rgba(16,185,129,0.1)">
+                <i class="pi pi-check-circle" style="color:#059669"></i>
+            </div>
+            <div class="stat-body">
+                <span class="stat-num">{{ s.access.presentToday }}</span>
+                <span class="stat-lbl">Presentes hoy</span>
+                <span class="stat-sub stat-warn">{{ s.access.absentToday }} ausentes · {{ s.access.lateToday }}
+                    tarde</span>
+            </div>
+        </div>
+
+        <div class="stat-card clickable" (click)="navigate('/sys/payments')">
+            <div class="stat-icon-wrap" style="background:rgba(245,158,11,0.1)">
+                <i class="pi pi-credit-card" style="color:#d97706"></i>
+            </div>
+            <div class="stat-body">
+                <span class="stat-num">{{ s.payments.pendingCount }}</span>
+                <span class="stat-lbl">Pagos pendientes</span>
+                <span class="stat-sub stat-danger">{{ s.payments.overdueCount }} vencidos</span>
+            </div>
+        </div>
+
+        <div class="stat-card clickable" (click)="navigate('/sys/access')">
+            <div class="stat-icon-wrap" style="background:rgba(220,38,38,0.1)">
+                <i class="pi pi-exclamation-triangle" style="color:#dc2626"></i>
+            </div>
+            <div class="stat-body">
+                <span class="stat-num">{{ s.infractions.openCount }}</span>
+                <span class="stat-lbl">Infracciones abiertas</span>
+                @if (s.infractions.criticalCount > 0) {
+                <span class="stat-sub stat-danger">{{ s.infractions.criticalCount }} críticas</span>
+                } @else {
+                <span class="stat-sub">Sin críticas</span>
+                }
+            </div>
+        </div>
+
+        <div class="stat-card clickable" (click)="navigate('/sys/events')">
+            <div class="stat-icon-wrap" style="background:rgba(99,102,241,0.1)">
+                <i class="pi pi-calendar" style="color:#6366f1"></i>
+            </div>
+            <div class="stat-body">
+                <span class="stat-num">{{ upcomingEvents().length }}</span>
+                <span class="stat-lbl">Eventos próximos</span>
+                <span class="stat-sub">Año lectivo 2025</span>
+            </div>
+        </div>
+    </div>
+    }
+
+    <!-- ── Main Grid ───────────────────────────────────────────────────────── -->
+    <div class="main-grid">
+
+        <!-- Columna izquierda -->
+        <div class="col-left">
+
+            <!-- Acciones rápidas -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2 class="panel-title"><i class="pi pi-th-large"></i> Acceso rápido</h2>
+                </div>
+                <div class="quick-actions-grid">
+                    @for (action of quickActions; track action.route) {
+                    <button class="quick-action-btn" (click)="navigate(action.route)" [pTooltip]="action.desc"
+                        tooltipPosition="top">
+                        <div class="qa-icon" [style.background]="action.bg">
+                            <i class="pi" [class]="action.icon" [style.color]="action.color"></i>
+                        </div>
+                        <span class="qa-label">{{ action.label }}</span>
+                    </button>
+                    }
+                </div>
+            </div>
+
+            <!-- Alertas del sistema -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">
+                        <i class="pi pi-bell"></i> Alertas
+                        @if (alerts().length > 0) {
+                        <span class="alert-count-badge">{{ alerts().length }}</span>
+                        }
+                    </h2>
+                </div>
+                @if (loadingAlerts()) {
+                <div class="flex flex-col gap-2">
+                    @for (i of [1,2,3]; track i) { <p-skeleton height="3rem" /> }
+                </div>
+                } @else if (alerts().length === 0) {
+                <div class="empty-panel">
+                    <i class="pi pi-check-circle"></i>
+                    <p>Sin alertas pendientes</p>
+                </div>
+                } @else {
+                <div class="alerts-list">
+                    <!-- Críticas -->
+                    @for (alert of dangerAlerts; track alert.id) {
+                    <div class="alert-item alert-danger" (click)="alert.link && navigate(alert.link)">
+                        <div class="alert-icon"><i class="pi" [class]="alert.icon"></i></div>
+                        <div class="alert-body">
+                            <span class="alert-category">{{ alert.category }}</span>
+                            <span class="alert-title">{{ alert.title }}</span>
+                            <span class="alert-detail">{{ alert.detail }}</span>
+                        </div>
+                        @if (alert.link) { <i class="pi pi-arrow-right alert-arrow"></i> }
+                    </div>
+                    }
+                    <!-- Advertencias -->
+                    @for (alert of warnAlerts; track alert.id) {
+                    <div class="alert-item alert-warn" (click)="alert.link && navigate(alert.link)">
+                        <div class="alert-icon"><i class="pi" [class]="alert.icon"></i></div>
+                        <div class="alert-body">
+                            <span class="alert-category">{{ alert.category }}</span>
+                            <span class="alert-title">{{ alert.title }}</span>
+                            <span class="alert-detail">{{ alert.detail }}</span>
+                        </div>
+                        @if (alert.link) { <i class="pi pi-arrow-right alert-arrow"></i> }
+                    </div>
+                    }
+                    <!-- Informativas -->
+                    @for (alert of infoAlerts; track alert.id) {
+                    <div class="alert-item alert-info" (click)="alert.link && navigate(alert.link)">
+                        <div class="alert-icon"><i class="pi" [class]="alert.icon"></i></div>
+                        <div class="alert-body">
+                            <span class="alert-category">{{ alert.category }}</span>
+                            <span class="alert-title">{{ alert.title }}</span>
+                            <span class="alert-detail">{{ alert.detail }}</span>
+                        </div>
+                        @if (alert.link) { <i class="pi pi-arrow-right alert-arrow"></i> }
+                    </div>
+                    }
+                </div>
+                }
+            </div>
+
+        </div>
+
+        <!-- Columna derecha -->
+        <div class="col-right">
+
+            <!-- Eventos próximos -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2 class="panel-title"><i class="pi pi-calendar"></i> Eventos próximos</h2>
+                    <button pButton label="Ver todos" severity="secondary" [text]="true" size="small"
+                        (click)="navigate('/sys/events')"></button>
+                </div>
+                @if (loadingEvents()) {
+                <div class="flex flex-col gap-2">
+                    @for (i of [1,2,3]; track i) { <p-skeleton height="3.5rem" /> }
+                </div>
+                } @else if (upcomingEvents().length === 0) {
+                <div class="empty-panel">
+                    <i class="pi pi-calendar-times"></i>
+                    <p>Sin eventos próximos</p>
+                </div>
+                } @else {
+                <div class="events-list">
+                    @for (ev of upcomingEvents(); track ev.idEvent) {
+                    <div class="event-item" (click)="navigate('/sys/events')">
+                        <div class="event-date-block">
+                            <span class="event-day">{{ ev.eventDate.slice(8,10) }}</span>
+                            <span class="event-month">{{ ev.eventDate.slice(5,7) | slice:0:3 }}</span>
+                        </div>
+                        <div class="event-body">
+                            <span class="event-name">{{ ev.name }}</span>
+                            <span class="event-meta">
+                                @if (ev.eventTime) { <i class="pi pi-clock"></i> {{ ev.eventTime }} · }
+                                @if (ev.location) { <i class="pi pi-map-marker"></i> {{ ev.location }} }
+                            </span>
+                        </div>
+                        <p-tag [value]="getEventStatusLabel(ev.status)" [severity]="getEventStatusSeverity(ev.status)"
+                            styleClass="text-xs" />
+                    </div>
+                    }
+                </div>
+                }
+            </div>
+
+            <!-- Actividad reciente -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2 class="panel-title"><i class="pi pi-history"></i> Actividad reciente</h2>
+                </div>
+                @if (loadingActivity()) {
+                <div class="flex flex-col gap-2">
+                    @for (i of [1,2,3,4]; track i) { <p-skeleton height="2.5rem" /> }
+                </div>
+                } @else if (activity().length === 0) {
+                <div class="empty-panel">
+                    <i class="pi pi-clock"></i>
+                    <p>Sin actividad reciente</p>
+                </div>
+                } @else {
+                <div class="activity-list">
+                    @for (item of activity(); track item.id) {
+                    <div class="activity-item">
+                        <div class="activity-icon" [style.background]="item.color + '18'">
+                            <i class="pi" [class]="item.icon" [style.color]="item.color"></i>
+                        </div>
+                        <div class="activity-body">
+                            <span class="activity-title">{{ item.title }}</span>
+                            <span class="activity-detail">{{ item.detail }}</span>
+                        </div>
+                        <span class="activity-time">{{ item.time }}</span>
+                    </div>
+                    }
+                </div>
+                }
+            </div>
+
+        </div>
+    </div>
+</div>

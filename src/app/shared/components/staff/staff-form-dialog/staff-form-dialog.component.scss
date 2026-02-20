@@ -1,0 +1,94 @@
+// src/app/shared/components/staff/staff-form-dialog/staff-form-dialog.component.scss
+
+.dialog-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.dialog-header-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 0.6rem;
+    background: var(--primary-50, rgba(59, 130, 246, 0.1));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    i {
+        font-size: 1.2rem;
+        color: var(--primary-color);
+    }
+}
+
+.dialog-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--surface-900);
+    margin: 0;
+}
+
+.dialog-subtitle {
+    font-size: 0.82rem;
+    color: var(--text-color-secondary);
+    margin: 0;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem 1.25rem;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    &.col-span-2 {
+        grid-column: span 2;
+    }
+    label {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--text-color-secondary);
+    }
+    input,
+    p-select,
+    p-datepicker,
+    p-inputnumber {
+        width: 100%;
+    }
+    textarea {
+        width: 100%;
+        resize: none;
+    }
+}
+
+.req {
+    color: var(--red-500);
+}
+.error-msg {
+    font-size: 0.75rem;
+    color: var(--red-500);
+}
+
+.step-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--surface-200);
+}
+
+@media (max-width: 640px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+        .col-span-2 {
+            grid-column: span 1;
+        }
+    }
+    .dialog-header-icon {
+        display: none;
+    }
+}

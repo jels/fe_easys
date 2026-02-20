@@ -1,0 +1,452 @@
+<!-- src/app/modules/academic/academic.component.html -->
+<div class="academic-page">
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-header-content">
+            <div class="page-title-section">
+                <h1 class="page-title">
+                    <i class="pi pi-book"></i>
+                    Académico
+                </h1>
+                <p class="page-subtitle">Notas, materias, horarios y períodos del año lectivo</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    @if (stats()) {
+    <div class="stats-grid">
+        <div class="stat-card stat-sections">
+            <div class="stat-icon"><i class="pi pi-users"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ stats().totalSections }}</span>
+                <span class="stat-label">Secciones activas</span>
+            </div>
+        </div>
+        <div class="stat-card stat-students">
+            <div class="stat-icon"><i class="pi pi-user"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ stats().totalStudents }}</span>
+                <span class="stat-label">Alumnos activos</span>
+            </div>
+        </div>
+        <div class="stat-card stat-subjects">
+            <div class="stat-icon"><i class="pi pi-book"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ stats().totalSubjects }}</span>
+                <span class="stat-label">Materias</span>
+            </div>
+        </div>
+        <div class="stat-card stat-period">
+            <div class="stat-icon"><i class="pi pi-calendar"></i></div>
+            <div class="stat-info">
+                <span class="stat-value period-name">{{ stats().activePeriod }}</span>
+                <span class="stat-label">Período activo</span>
+                <span class="stat-sub">{{ stats().scoresLoaded }} notas cargadas</span>
+            </div>
+        </div>
+    </div>
+    }
+
+    <!-- Tabs -->
+    <div class="tabs-card">
+        <p-tabs [value]="activeTab()" (valueChange)="activeTab.set($event?.toString() ?? '0')">
+            <p-tablist>
+                <p-tab value="0"><i class="pi pi-pencil mr-1"></i>Notas</p-tab>
+                <p-tab value="1"><i class="pi pi-list mr-1"></i>Materias</p-tab>
+                <p-tab value="2"><i class="pi pi-calendar mr-1"></i>Horarios</p-tab>
+                <p-tab value="3"><i class="pi pi-clock mr-1"></i>Períodos</p-tab>
+            </p-tablist>
+
+            <p-tabpanels>
+
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <!-- TAB 1 — NOTAS                                             -->
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <p-tabpanel value="0">
+
+                    <!-- Selectores Grado / Sección -->
+                    <div class="grade-selectors">
+                        <div class="selector-group">
+                            <label class="selector-label">Grado</label>
+                            <p-select [options]="gradeOptions" [(ngModel)]="selectedGrade" optionLabel="label"
+                                optionValue="value" placeholder="Seleccionar grado" [showClear]="true"
+                                (onChange)="onGradeChange()" styleClass="w-full" />
+                        </div>
+                        <div class="selector-group" [class.disabled]="!selectedGrade">
+                            <label class="selector-label">Sección</label>
+                            <p-select [options]="sectionOptions" [(ngModel)]="selectedSection" optionLabel="label"
+                                optionValue="value" placeholder="Seleccionar sección" [showClear]="true"
+                                [disabled]="!selectedGrade" (onChange)="onSectionChange()" styleClass="w-full" />
+                        </div>
+                        @if (selectedSection) {
+                        <div class="section-info-badge">
+                            <i class="pi pi-info-circle"></i>
+                            {{ selectedSection.homeroomTeacherName ?? 'Sin tutor' }}
+                            &nbsp;·&nbsp; Cap. {{ selectedSection.maxCapacity }}
+                        </div>
+                        }
+                    </div>
+
+                    <!-- Estado vacío: sin selección -->
+                    @if (!selectedGrade || !selectedSection) {
+                    <div class="empty-tab">
+                        <i class="pi pi-arrow-up-left"></i>
+                        <p>Seleccioná un grado y sección para ver las notas</p>
+                    </div>
+                    }
+
+                    <!-- Loading alumnos -->
+                    @if (loadingStudents() && selectedSection) {
+                    <div class="flex flex-col gap-2 mt-4">
+                        @for (i of [1,2,3]; track i) { <p-skeleton height="3rem" /> }
+                    </div>
+                    }
+
+                    <!-- Tabla de alumnos con row expansion -->
+                    @if (!loadingStudents() && sectionStudents().length > 0) {
+                    <div class="students-grade-list">
+                        @for (grid of gradeGrids(); track grid.student.idStudent) {
+                        <!-- Fila del alumno -->
+                        <div class="student-row" [class.expanded]="grid.expanded">
+                            <div class="student-row-header" (click)="toggleStudentExpansion(grid)">
+                                <div class="student-row-left">
+                                    <i class="pi" [class.pi-chevron-down]="grid.expanded"
+                                        [class.pi-chevron-right]="!grid.expanded"></i>
+                                    <div class="student-avatar">
+                                        {{ grid.student.fullName.charAt(0) }}
+                                    </div>
+                                    <div class="student-info">
+                                        <span class="student-name">{{ grid.student.fullName }}</span>
+                                        <span class="student-sub mono">{{ grid.student.enrollmentNumber }}</span>
+                                    </div>
+                                </div>
+                                <div class="student-row-right">
+                                    @if (grid.isReprobado) {
+                                    <span class="reprobado-badge">
+                                        <i class="pi pi-times-circle"></i> Reprobado
+                                    </span>
+                                    }
+                                    @if (grid.generalAvg !== null) {
+                                    <span class="general-avg-badge" [class]="getScoreColor(grid.generalAvg)">
+                                        Prom. gral: {{ grid.generalAvg }}
+                                    </span>
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- Panel de notas expandido -->
+                            @if (grid.expanded) {
+                            <div class="grade-panel">
+                                @if (loadingScores()[grid.student.idStudent]) {
+                                <p-skeleton height="200px" />
+                                } @else {
+                                @if (grid.isReprobado) {
+                                <div class="reprobado-banner">
+                                    <div class="reprobado-banner-title">
+                                        <i class="pi pi-exclamation-triangle"></i>
+                                        <strong>Alumno Reprobado</strong>
+                                    </div>
+                                    <div class="reprobado-subjects">
+                                        @for (mat of grid.failedSubjects; track mat) {
+                                        <span class="reprobado-subject-chip">{{ mat }}</span>
+                                        }
+                                    </div>
+                                </div>
+                                }
+                                <div class="grade-table-wrapper">
+                                    <table class="grade-table">
+                                        <thead>
+                                            <tr>
+                                                <th class="col-subject">Materia</th>
+                                                @for (period of periods(); track period.idSchoolPeriod) {
+                                                <th class="col-period">{{ period.name }}</th>
+                                                }
+                                                <th class="col-avg">Prom. Año</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @for (row of grid.rows; track row.idSubject) {
+                                            <tr [class.row-failed]="row.failedLastPeriod || row.failedYearAvg">
+                                                <td class="col-subject">
+                                                    <span class="subject-code">{{ row.subjectCode }}</span>
+                                                    {{ row.subjectName }}
+                                                    @if (row.failedLastPeriod) {
+                                                    <span class="fail-reason-chip"
+                                                        pTooltip="Nota 1 en el último período" tooltipPosition="right">
+                                                        <i class="pi pi-exclamation-circle"></i> Ult. período
+                                                    </span>
+                                                    }
+                                                    @if (row.failedYearAvg && !row.failedLastPeriod) {
+                                                    <span class="fail-reason-chip" pTooltip="Promedio anual menor a 2"
+                                                        tooltipPosition="right">
+                                                        <i class="pi pi-exclamation-circle"></i> Prom. anual
+                                                    </span>
+                                                    }
+                                                </td>
+                                                @for (period of periods(); track period.idSchoolPeriod) {
+                                                <td class="col-period">
+                                                    @if (row.cells.get(period.idSchoolPeriod); as cell) {
+                                                    @if (cell.saving) {
+                                                    <i class="pi pi-spin pi-spinner saving-spinner"></i>
+                                                    } @else if (cell.editing) {
+                                                    <input class="score-input" type="number" min="0" max="10" step="0.5"
+                                                        [(ngModel)]="cell.tempValue"
+                                                        (blur)="saveScore(grid, row, period, cell)"
+                                                        (keydown)="onScoreKeydown($event, grid, row, period, cell)"
+                                                        #scoreInput autofocus />
+                                                    } @else {
+                                                    <span class="score-cell" [class]="getScoreColor(cell.score)"
+                                                        [class.empty-score]="cell.score === null"
+                                                        (click)="startEdit(cell)" pTooltip="Click para editar"
+                                                        tooltipPosition="top">
+                                                        {{ cell.score !== null ? cell.score : '—' }}
+                                                    </span>
+                                                    }
+                                                    }
+                                                </td>
+                                                }
+                                                <td class="col-avg">
+                                                    @if (row.yearAvg !== null) {
+                                                    <span class="avg-badge" [class]="getScoreColor(row.yearAvg)">
+                                                        {{ row.yearAvg }}
+                                                    </span>
+                                                    @if (row.failedYearAvg) {
+                                                    <i class="pi pi-times-circle fail-icon"
+                                                        pTooltip="Reprobado: promedio < 2" tooltipPosition="top"></i>
+                                                    }
+                                                    } @else {
+                                                    <span class="no-avg">–</span>
+                                                    }
+                                                </td>
+                                            </tr>
+                                            }
+                                        </tbody>
+                                        <!-- Footer: Promedios por período -->
+                                        <tfoot>
+                                            <tr class="period-avg-row">
+                                                <td class="col-subject footer-label">Promedio período</td>
+                                                @for (period of periods(); track period.idSchoolPeriod) {
+                                                <td class="col-period">
+                                                    @if (grid.periodAvgs.get(period.idSchoolPeriod); as avg) {
+                                                    <span class="avg-badge" [class]="getScoreColor(avg)">{{ avg
+                                                        }}</span>
+                                                    } @else {
+                                                    <span class="no-avg">–</span>
+                                                    }
+                                                </td>
+                                                }
+                                                <td class="col-avg">
+                                                    @if (grid.generalAvg !== null) {
+                                                    <span class="general-avg-cell"
+                                                        [class]="getScoreColor(grid.generalAvg)">
+                                                        {{ grid.generalAvg }}
+                                                    </span>
+                                                    } @else {
+                                                    <span class="no-avg">–</span>
+                                                    }
+                                                </td>
+                                            </tr>
+                                            <tr class="general-avg-row">
+                                                <td [attr.colspan]="periods().length + 2" class="general-avg-td">
+                                                    <span class="general-avg-label">Promedio General del Alumno:</span>
+                                                    @if (grid.generalAvg !== null) {
+                                                    <span class="general-avg-value"
+                                                        [class]="getScoreColor(grid.generalAvg)">
+                                                        {{ grid.generalAvg }}
+                                                    </span>
+                                                    } @else {
+                                                    <span class="no-avg">Sin notas cargadas</span>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                                }
+                            </div>
+                            }
+                        </div>
+                        }
+                    </div>
+                    }
+
+                    @if (!loadingStudents() && selectedSection && sectionStudents().length === 0) {
+                    <div class="empty-tab">
+                        <i class="pi pi-users"></i>
+                        <p>Sin alumnos registrados en esta sección</p>
+                    </div>
+                    }
+                </p-tabpanel>
+
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <!-- TAB 2 — MATERIAS                                          -->
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <p-tabpanel value="1">
+                    <div class="tab-section-title">Materias del Año Lectivo</div>
+                    <p-table [value]="subjects()" styleClass="p-datatable-sm" responsiveLayout="scroll">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th>Código</th>
+                                <th>Materia</th>
+                                <th class="text-center">Activa</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-subject>
+                            <tr>
+                                <td><span class="subject-code-badge">{{ subject.code }}</span></td>
+                                <td class="font-medium">{{ subject.name }}</td>
+                                <td class="text-center">
+                                    <i
+                                        [class]="subject.isActive ? 'pi pi-check-circle text-green-500' : 'pi pi-times-circle text-red-400'"></i>
+                                </td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
+
+                    <div class="tab-section-title mt-6">Secciones por Grado</div>
+                    <p-table [value]="sections().length ? sections() : allSections" styleClass="p-datatable-sm"
+                        responsiveLayout="scroll">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th>Grado</th>
+                                <th>Sección</th>
+                                <th>Tutor/a</th>
+                                <th class="text-center">Capacidad</th>
+                                <th class="text-center">Nivel</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-section>
+                            <tr>
+                                <td class="font-semibold">{{ section.gradeName }}</td>
+                                <td><span class="section-badge">{{ section.name }}</span></td>
+                                <td>{{ section.homeroomTeacherName ?? '–' }}</td>
+                                <td class="text-center">{{ section.maxCapacity }}</td>
+                                <td class="text-center">
+                                    @if (getGradeLevel(section.idGrade); as level) {
+                                    <p-tag [value]="getLevelLabel(level)" [severity]="getLevelSeverity(level)" />
+                                    }
+                                </td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
+                </p-tabpanel>
+
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <!-- TAB 3 — HORARIOS                                          -->
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <p-tabpanel value="2">
+                    <div class="grade-selectors">
+                        <div class="selector-group">
+                            <label class="selector-label">Sección</label>
+                            <p-select [options]="allSectionOptions" [(ngModel)]="selectedSectionSchedule"
+                                optionLabel="label" optionValue="value" placeholder="Seleccionar sección"
+                                [showClear]="true" (onChange)="onSectionScheduleChange()" styleClass="w-full" />
+                        </div>
+                    </div>
+
+                    @if (!selectedSectionSchedule) {
+                    <div class="empty-tab">
+                        <i class="pi pi-calendar"></i>
+                        <p>Seleccioná una sección para ver su horario</p>
+                    </div>
+                    }
+
+                    @if (loadingSchedules()) {
+                    <p-skeleton height="200px" class="mt-4" />
+                    }
+
+                    @if (!loadingSchedules() && selectedSectionSchedule && schedules().length > 0) {
+                    <div class="schedule-grid-wrapper mt-4">
+                        <table class="schedule-table">
+                            <thead>
+                                <tr>
+                                    <th class="time-col">Hora</th>
+                                    @for (day of DAYS; track day) {
+                                    <th>{{ day }}</th>
+                                    }
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (time of uniqueTimeSlots; track time) {
+                                <tr>
+                                    <td class="time-col">{{ time }}</td>
+                                    @for (day of DAYS; track day) {
+                                    <td>
+                                        @if (getScheduleForSlot(day, time); as slot) {
+                                        <div class="schedule-cell">
+                                            <span class="schedule-subject">{{ slot.subjectName }}</span>
+                                            <span class="schedule-teacher">{{ slot.teacherName }}</span>
+                                            @if (slot.classroom) {
+                                            <span class="schedule-room">{{ slot.classroom }}</span>
+                                            }
+                                        </div>
+                                        }
+                                    </td>
+                                    }
+                                </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    }
+
+                    @if (!loadingSchedules() && selectedSectionSchedule && schedules().length === 0) {
+                    <div class="empty-tab">
+                        <i class="pi pi-calendar-times"></i>
+                        <p>Sin horarios configurados para esta sección</p>
+                    </div>
+                    }
+                </p-tabpanel>
+
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <!-- TAB 4 — PERÍODOS                                          -->
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <p-tabpanel value="3">
+                    <div class="tab-section-title">Bimestres — Año Lectivo 2025</div>
+                    <div class="periods-grid">
+                        @for (period of periods(); track period.idSchoolPeriod) {
+                        <div class="period-card" [class.period-active]="period.isActive">
+                            <div class="period-number">{{ period.periodNumber }}°</div>
+                            <div class="period-info">
+                                <span class="period-name-text">{{ period.name }}</span>
+                                <span class="period-dates">{{ period.startDate }} → {{ period.endDate }}</span>
+                                @if (period.isActive) {
+                                <p-tag value="Período activo" severity="success" styleClass="text-xs mt-1" />
+                                }
+                            </div>
+                        </div>
+                        }
+                    </div>
+
+                    <div class="tab-section-title mt-6">Años Lectivos</div>
+                    <p-table [value]="schoolYears()" styleClass="p-datatable-sm" responsiveLayout="scroll">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th>Año</th>
+                                <th>Inicio</th>
+                                <th>Fin</th>
+                                <th class="text-center">Estado</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-year>
+                            <tr>
+                                <td class="font-semibold">{{ year.name }}</td>
+                                <td>{{ year.startDate }}</td>
+                                <td>{{ year.endDate }}</td>
+                                <td class="text-center">
+                                    <p-tag [value]="year.isActive ? 'Activo' : 'Cerrado'"
+                                        [severity]="year.isActive ? 'success' : 'secondary'" />
+                                </td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
+                </p-tabpanel>
+
+            </p-tabpanels>
+        </p-tabs>
+    </div>
+</div>
+
+<p-toast position="top-right" />

@@ -1,0 +1,103 @@
+<!-- src/app/shared/components/payments/payment-detail-dialog/payment-detail-dialog.component.html -->
+<p-dialog header="Detalle del Recibo" [(visible)]="visible" [modal]="true" [draggable]="false" [resizable]="false"
+    [style]="{ width: '500px', maxWidth: '95vw' }" [closeOnEscape]="true" (onHide)="close()">
+
+    <ng-template pTemplate="header">
+        <div class="dialog-header">
+            <div class="dialog-icon">
+                <i class="pi pi-receipt"></i>
+            </div>
+            <div>
+                <h3 class="dialog-title">Recibo de Pago</h3>
+                @if (payment()) {
+                <p class="dialog-subtitle receipt-num">{{ payment()!.receiptNumber }}</p>
+                }
+            </div>
+        </div>
+    </ng-template>
+
+    @if (loading()) {
+    <div class="flex flex-col gap-3 p-2">
+        @for (i of [1,2,3,4]; track i) { <p-skeleton height="2.5rem" /> }
+    </div>
+    } @else if (payment()) {
+    <div class="receipt-body">
+
+        <!-- Status banner -->
+        <div class="receipt-status-banner" [class.cancelled]="!payment()!.isActive">
+            <i [class]="payment()!.isActive ? 'pi pi-check-circle' : 'pi pi-times-circle'"></i>
+            <span>{{ payment()!.isActive ? 'Pago Activo' : 'ANULADO' }}</span>
+        </div>
+
+        <!-- Monto destacado -->
+        <div class="receipt-amount">
+            <span class="amount-label">Monto Pagado</span>
+            <span class="amount-big">{{ formatCurrency(payment()!.amount) }}</span>
+        </div>
+
+        <p-divider />
+
+        <!-- Datos del alumno -->
+        <div class="receipt-section-title">Alumno</div>
+        <div class="receipt-grid">
+            <div class="receipt-field">
+                <span class="rf-label">Nombre</span>
+                <span class="rf-value">{{ payment()!.studentName }}</span>
+            </div>
+            <div class="receipt-field">
+                <span class="rf-label">Matrícula</span>
+                <span class="rf-value mono">{{ payment()!.receiptNumber }}</span>
+            </div>
+        </div>
+
+        <p-divider />
+
+        <!-- Datos del pago -->
+        <div class="receipt-section-title">Detalle del Pago</div>
+        <div class="receipt-grid">
+            <div class="receipt-field">
+                <span class="rf-label">Concepto</span>
+                <span class="rf-value">{{ payment()!.paymentMethodName ?? '–' }}</span>
+            </div>
+            <div class="receipt-field">
+                <span class="rf-label">Fecha</span>
+                <span class="rf-value">{{ payment()!.paymentDate }}</span>
+            </div>
+            <div class="receipt-field">
+                <span class="rf-label">Método</span>
+                <span class="rf-value">
+                    <i [class]="getMethodIcon(payment()!.paymentMethodName ?? '')" style="margin-right:0.3rem"></i>
+                    {{ payment()!.paymentMethodName }}
+                </span>
+            </div>
+            @if (payment()!.referenceNumber) {
+            <div class="receipt-field">
+                <span class="rf-label">Referencia</span>
+                <span class="rf-value mono">{{ payment()!.referenceNumber }}</span>
+            </div>
+            }
+            @if (payment()!.idPaymentInstallment) {
+            <div class="receipt-field">
+                <span class="rf-label">Cuota vinculada</span>
+                <span class="rf-value mono">#{{ payment()!.idPaymentInstallment }}</span>
+            </div>
+            }
+        </div>
+
+        @if (payment()!.notes) {
+        <p-divider />
+        <div class="receipt-notes">
+            <span class="rf-label">Observaciones</span>
+            <span class="notes-text">{{ payment()!.notes }}</span>
+        </div>
+        }
+    </div>
+    }
+
+    <ng-template pTemplate="footer">
+        <div class="dialog-footer">
+            <p-button label="Imprimir" icon="pi pi-print" severity="secondary" [text]="true" (onClick)="close()" />
+            <p-button label="Cerrar" icon="pi pi-times" severity="secondary" (onClick)="close()" />
+        </div>
+    </ng-template>
+</p-dialog>

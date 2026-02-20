@@ -1,0 +1,707 @@
+// src/app/modules/academic/academic.component.scss
+:host {
+    display: block;
+}
+.academic-page {
+    animation: fadeIn 0.4s ease-out;
+}
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+// ── Page Header ───────────────────────────────────────────────────────────────
+.page-header {
+    margin-bottom: 1.5rem;
+}
+.page-header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+.page-title {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: var(--surface-900);
+    margin: 0 0 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    i {
+        color: var(--primary-color);
+    }
+}
+.page-subtitle {
+    color: var(--text-color-secondary);
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+// ── Stats Grid ────────────────────────────────────────────────────────────────
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.stat-card {
+    background: var(--surface-card);
+    border-radius: 0.75rem;
+    padding: 1.1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: var(--card-shadow);
+    border-left: 4px solid transparent;
+    transition: transform 0.2s;
+    &:hover {
+        transform: translateY(-2px);
+    }
+    &.stat-sections {
+        border-left-color: #6366f1;
+    }
+    &.stat-students {
+        border-left-color: #3b82f6;
+    }
+    &.stat-subjects {
+        border-left-color: #10b981;
+    }
+    &.stat-period {
+        border-left-color: #f59e0b;
+    }
+}
+.stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 0.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    i {
+        font-size: 1.2rem;
+    }
+    .stat-sections & {
+        background: rgba(99, 102, 241, 0.12);
+        i {
+            color: #6366f1;
+        }
+    }
+    .stat-students & {
+        background: rgba(59, 130, 246, 0.12);
+        i {
+            color: #2563eb;
+        }
+    }
+    .stat-subjects & {
+        background: rgba(16, 185, 129, 0.12);
+        i {
+            color: #059669;
+        }
+    }
+    .stat-period & {
+        background: rgba(245, 158, 11, 0.12);
+        i {
+            color: #d97706;
+        }
+    }
+}
+.stat-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.05rem;
+    flex: 1;
+    min-width: 0;
+}
+.stat-value {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--surface-900);
+    &.period-name {
+        font-size: 0.95rem;
+    }
+}
+.stat-label {
+    font-size: 0.75rem;
+    color: var(--text-color-secondary);
+    font-weight: 500;
+}
+.stat-sub {
+    font-size: 0.72rem;
+    color: var(--text-color-secondary);
+}
+
+// ── Tabs Card ─────────────────────────────────────────────────────────────────
+.tabs-card {
+    background: var(--surface-card);
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    box-shadow: var(--card-shadow);
+}
+
+// ── Selectores de Grado/Sección ───────────────────────────────────────────────
+.grade-selectors {
+    display: flex;
+    align-items: flex-end;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--surface-200);
+}
+.selector-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    flex: 1;
+    min-width: 200px;
+    &.disabled {
+        opacity: 0.5;
+    }
+}
+.selector-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-color-secondary);
+}
+.section-info-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.85rem;
+    background: rgba(99, 102, 241, 0.07);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    border-radius: 0.5rem;
+    font-size: 0.82rem;
+    color: #4338ca;
+    white-space: nowrap;
+    height: fit-content;
+    i {
+        color: #6366f1;
+    }
+}
+
+// ── Lista de alumnos con expansión ────────────────────────────────────────────
+.students-grade-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.student-row {
+    border: 1px solid var(--surface-200);
+    border-radius: 0.65rem;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+    &:hover {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+    }
+    &.expanded {
+        border-color: var(--primary-300, #a5b4fc);
+        box-shadow: 0 2px 12px rgba(99, 102, 241, 0.1);
+    }
+}
+
+.student-row-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    background: var(--surface-50);
+    user-select: none;
+    &:hover {
+        background: var(--surface-100);
+    }
+    .expanded & {
+        background: rgba(99, 102, 241, 0.05);
+    }
+}
+
+.student-row-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    i {
+        color: var(--text-color-secondary);
+        font-size: 0.85rem;
+        transition: transform 0.2s;
+    }
+}
+.student-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: var(--primary-100, #e0e7ff);
+    color: var(--primary-700, #3730a3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+.student-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.05rem;
+}
+.student-name {
+    font-weight: 600;
+    color: var(--surface-900);
+    font-size: 0.9rem;
+}
+.student-sub {
+    font-size: 0.72rem;
+    color: var(--text-color-secondary);
+}
+.mono {
+    font-family: 'Courier New', monospace;
+}
+
+.student-row-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.general-avg-badge {
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 0.2rem 0.6rem;
+    border-radius: 0.4rem;
+    border: 1px solid currentColor;
+}
+
+// ── Panel de notas ────────────────────────────────────────────────────────────
+.grade-panel {
+    padding: 1rem;
+    background: white;
+    border-top: 1px solid var(--surface-200);
+}
+
+.grade-table-wrapper {
+    overflow-x: auto;
+}
+
+.grade-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+
+    th,
+    td {
+        padding: 0.5rem 0.65rem;
+        border: 1px solid var(--surface-200);
+        text-align: center;
+        vertical-align: middle;
+    }
+    th {
+        background: var(--surface-100);
+        font-weight: 700;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-color-secondary);
+    }
+    .col-subject {
+        text-align: left;
+        min-width: 180px;
+        th {
+            text-align: left;
+        }
+    }
+    .col-period {
+        min-width: 90px;
+    }
+    .col-avg {
+        min-width: 90px;
+        background: var(--surface-50);
+        font-weight: 600;
+    }
+}
+
+.subject-code {
+    font-family: 'Courier New', monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    background: var(--primary-50, rgba(99, 102, 241, 0.08));
+    padding: 0.1rem 0.3rem;
+    border-radius: 0.2rem;
+    margin-right: 0.4rem;
+}
+
+// ── Celda de nota editable ────────────────────────────────────────────────────
+.score-cell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 42px;
+    min-height: 28px;
+    padding: 0.15rem 0.4rem;
+    border-radius: 0.35rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.15s;
+    &:hover {
+        border-color: var(--primary-300, #a5b4fc);
+        background: var(--primary-50, rgba(99, 102, 241, 0.06));
+    }
+    &.empty-score {
+        color: var(--surface-400);
+        font-weight: 400;
+        &:hover {
+            border-color: var(--surface-300);
+        }
+    }
+}
+
+.score-input {
+    width: 60px;
+    padding: 0.25rem 0.35rem;
+    border: 2px solid var(--primary-color);
+    border-radius: 0.35rem;
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+    outline: none;
+    background: white;
+    &:focus {
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+    }
+}
+
+.saving-spinner {
+    color: var(--primary-color);
+    font-size: 1rem;
+}
+
+// ── Colores de notas ──────────────────────────────────────────────────────────
+.score-excellent {
+    color: #15803d;
+    background: rgba(22, 163, 74, 0.08);
+}
+.score-good {
+    color: #2563eb;
+    background: rgba(59, 130, 246, 0.08);
+}
+.score-regular {
+    color: #d97706;
+    background: rgba(245, 158, 11, 0.08);
+}
+.score-fail {
+    color: #dc2626;
+    background: rgba(239, 68, 68, 0.08);
+}
+
+// ── Avg badges ───────────────────────────────────────────────────────────────
+.avg-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 42px;
+    padding: 0.15rem 0.4rem;
+    border-radius: 0.35rem;
+    font-weight: 700;
+}
+.no-avg {
+    color: var(--surface-400);
+    font-size: 0.85rem;
+}
+
+// ── Footer de la tabla ────────────────────────────────────────────────────────
+.period-avg-row td {
+    background: var(--surface-50);
+    font-weight: 600;
+    border-top: 2px solid var(--surface-300);
+}
+.footer-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-color-secondary);
+    text-align: left;
+}
+.general-avg-row td {
+    background: var(--surface-100);
+}
+.general-avg-td {
+    text-align: right;
+    padding: 0.6rem 1rem;
+    display: table-cell;
+}
+.general-avg-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-color-secondary);
+    margin-right: 0.75rem;
+}
+.general-avg-cell,
+.general-avg-value {
+    font-size: 1.05rem;
+    font-weight: 800;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.4rem;
+}
+
+// ── Tab 2: Materias ───────────────────────────────────────────────────────────
+.tab-section-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-color-secondary);
+    margin-bottom: 0.75rem;
+    &.mt-6 {
+        margin-top: 2rem;
+    }
+}
+.subject-code-badge {
+    font-family: 'Courier New', monospace;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    background: var(--primary-50, rgba(99, 102, 241, 0.08));
+    padding: 0.15rem 0.4rem;
+    border-radius: 0.25rem;
+}
+.section-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--primary-100, #e0e7ff);
+    color: var(--primary-700, #3730a3);
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+// ── Tab 3: Horarios ───────────────────────────────────────────────────────────
+.schedule-grid-wrapper {
+    overflow-x: auto;
+}
+.schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    th,
+    td {
+        border: 1px solid var(--surface-200);
+        padding: 0.4rem 0.5rem;
+        vertical-align: top;
+        min-width: 130px;
+    }
+    th {
+        background: var(--surface-100);
+        font-weight: 700;
+        text-align: center;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+    }
+    .time-col {
+        min-width: 70px;
+        text-align: center;
+        font-family: 'Courier New', monospace;
+        font-weight: 600;
+        color: var(--text-color-secondary);
+        background: var(--surface-50);
+    }
+}
+.schedule-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0.2rem;
+}
+.schedule-subject {
+    font-weight: 600;
+    color: var(--surface-900);
+    font-size: 0.82rem;
+}
+.schedule-teacher {
+    font-size: 0.72rem;
+    color: var(--text-color-secondary);
+}
+.schedule-room {
+    font-size: 0.7rem;
+    color: var(--primary-color);
+    font-style: italic;
+}
+
+// ── Tab 4: Períodos ───────────────────────────────────────────────────────────
+.periods-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+}
+.period-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.1rem 1.25rem;
+    border: 2px solid var(--surface-200);
+    border-radius: 0.75rem;
+    background: var(--surface-50);
+    &.period-active {
+        border-color: var(--green-400, #4ade80);
+        background: rgba(34, 197, 94, 0.04);
+    }
+}
+.period-number {
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: var(--primary-color);
+    line-height: 1;
+    flex-shrink: 0;
+}
+.period-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+.period-name-text {
+    font-weight: 700;
+    color: var(--surface-900);
+}
+.period-dates {
+    font-size: 0.75rem;
+    color: var(--text-color-secondary);
+    font-family: 'Courier New', monospace;
+}
+
+// ── Empty Tab ─────────────────────────────────────────────────────────────────
+.empty-tab {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-color-secondary);
+    i {
+        font-size: 2.5rem;
+        display: block;
+        margin-bottom: 0.75rem;
+        color: var(--surface-300);
+    }
+    p {
+        margin: 0;
+        font-size: 0.9rem;
+    }
+}
+
+// ── Responsive ────────────────────────────────────────────────────────────────
+@media (max-width: 1024px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    .grade-selectors {
+        flex-direction: column;
+    }
+}
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+// ── Reprobación ───────────────────────────────────────────────────────────────
+.reprobado-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.65rem;
+    border-radius: 0.4rem;
+    background: rgba(220, 38, 38, 0.1);
+    color: #dc2626;
+    border: 1px solid rgba(220, 38, 38, 0.3);
+    font-size: 0.78rem;
+    font-weight: 700;
+    i {
+        font-size: 0.8rem;
+    }
+}
+
+.reprobado-banner {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    background: rgba(220, 38, 38, 0.06);
+    border: 1px solid rgba(220, 38, 38, 0.25);
+    border-left: 4px solid #dc2626;
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+}
+.reprobado-banner-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #dc2626;
+    font-size: 0.88rem;
+    i {
+        font-size: 1rem;
+    }
+}
+.reprobado-subjects {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+.reprobado-subject-chip {
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    background: rgba(220, 38, 38, 0.1);
+    color: #b91c1c;
+    border: 1px solid rgba(220, 38, 38, 0.2);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.row-failed {
+    background: rgba(220, 38, 38, 0.03) !important;
+    td {
+        border-color: rgba(220, 38, 38, 0.12) !important;
+    }
+}
+
+.fail-reason-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    margin-left: 0.4rem;
+    padding: 0.1rem 0.35rem;
+    border-radius: 0.25rem;
+    background: rgba(220, 38, 38, 0.08);
+    color: #dc2626;
+    font-size: 0.68rem;
+    font-weight: 600;
+    cursor: default;
+    i {
+        font-size: 0.7rem;
+    }
+}
+
+.fail-icon {
+    color: #dc2626;
+    font-size: 0.85rem;
+    margin-left: 0.25rem;
+    vertical-align: middle;
+    cursor: default;
+}

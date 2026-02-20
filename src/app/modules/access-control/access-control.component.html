@@ -1,0 +1,470 @@
+<!-- src/app/modules/access-control/access-control.component.html -->
+<div class="access-page">
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-header-content">
+            <div class="page-title-section">
+                <h1 class="page-title">
+                    <i class="pi pi-shield"></i>
+                    Control de Acceso
+                </h1>
+                <p class="page-subtitle">Registro de entradas, salidas y eventos del día</p>
+            </div>
+            <div class="header-actions">
+                <p-datepicker [(ngModel)]="selectedDate" (ngModelChange)="onDateChange()" dateFormat="dd/mm/yy"
+                    [showIcon]="true" styleClass="date-picker-compact" />
+                <button pButton icon="pi pi-refresh" label="Actualizar" class="p-button-outlined p-button-sm"
+                    (click)="refreshAll()">
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    @if (stats()) {
+    <div class="stats-grid">
+        <div class="stat-card stat-present">
+            <div class="stat-icon"><i class="pi pi-check-circle"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ stats()!.studentsPresentToday }}</span>
+                <span class="stat-label">Alumnos presentes</span>
+            </div>
+        </div>
+        <div class="stat-card stat-absent">
+            <div class="stat-icon"><i class="pi pi-times-circle"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ stats()!.studentsAbsentToday }}</span>
+                <span class="stat-label">Alumnos ausentes</span>
+            </div>
+        </div>
+        <div class="stat-card stat-late">
+            <div class="stat-icon"><i class="pi pi-clock"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ stats()!.studentsLateToday }}</span>
+                <span class="stat-label">Tardanzas hoy</span>
+            </div>
+        </div>
+        <div class="stat-card stat-staff">
+            <div class="stat-icon"><i class="pi pi-id-card"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ stats()!.staffPresentToday }}</span>
+                <span class="stat-label">Personal presente</span>
+            </div>
+        </div>
+        <div class="stat-card stat-departure">
+            <div class="stat-icon"><i class="pi pi-sign-out"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ stats()!.earlyDeparturesToday }}</span>
+                <span class="stat-label">Retiros anticipados</span>
+            </div>
+        </div>
+        <div class="stat-card stat-infraction">
+            <div class="stat-icon"><i class="pi pi-exclamation-triangle"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ stats()!.infractionsPending }}</span>
+                <span class="stat-label">Infracciones pendientes</span>
+            </div>
+        </div>
+    </div>
+    }
+
+    <!-- Main Tabs -->
+    <div class="tabs-card">
+        <p-tabs [value]="activeTab()" (valueChange)="activeTab.set($event?.toString()  ?? '0')">
+            <p-tablist>
+                <p-tab value="0">
+                    <i class="pi pi-users mr-1"></i>
+                    Acceso Estudiantes
+                    @if (studentLogs().length) {
+                    <span class="tab-badge">{{ studentLogs().length }}</span>
+                    }
+                </p-tab>
+                <p-tab value="1">
+                    <i class="pi pi-id-card mr-1"></i>
+                    Acceso Personal
+                    @if (staffLogs().length) {
+                    <span class="tab-badge tab-badge-green">{{ staffLogs().length }}</span>
+                    }
+                </p-tab>
+                <p-tab value="2">
+                    <i class="pi pi-times-circle mr-1"></i>
+                    Ausentes
+                    @if (absentStudents().length) {
+                    <span class="tab-badge tab-badge-red">{{ absentStudents().length }}</span>
+                    }
+                </p-tab>
+                <p-tab value="3">
+                    <i class="pi pi-sign-out mr-1"></i>
+                    Retiros Anticipados
+                    @if (earlyDepartures().length) {
+                    <span class="tab-badge tab-badge-orange">{{ earlyDepartures().length }}</span>
+                    }
+                </p-tab>
+                <p-tab value="4">
+                    <i class="pi pi-exclamation-circle mr-1"></i>
+                    Infracciones
+                    @if (infractions().length) {
+                    <span class="tab-badge tab-badge-red">{{ infractions().length }}</span>
+                    }
+                </p-tab>
+            </p-tablist>
+
+            <p-tabpanels>
+
+                <!-- ── TAB 1: Acceso Estudiantes ──────────────────────────── -->
+                <p-tabpanel value="0">
+                    <div class="tab-toolbar">
+                        <div class="toolbar-left">
+                            <span class="p-input-icon-left">
+                                <i class="pi pi-search"></i>
+                                <input type="text" pInputText placeholder="Buscar alumno..." [(ngModel)]="searchStudent"
+                                    (keyup.enter)="onSearchStudent()" style="width: 260px" />
+                            </span>
+                        </div>
+                        <div class="toolbar-right">
+                            <button pButton icon="pi pi-plus" label="Registrar Entrada/Salida"
+                                class="p-button-primary p-button-sm" (click)="openAccessStudent()">
+                            </button>
+                        </div>
+                    </div>
+
+                    <p-table [value]="studentLogs()" [loading]="loadingStudent()" styleClass="p-datatable-sm"
+                        [paginator]="true" [rows]="10" [rowsPerPageOptions]="[5,10,25]" responsiveLayout="scroll">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th>Alumno</th>
+                                <th>Grado / Sección</th>
+                                <th>Entrada</th>
+                                <th>Salida</th>
+                                <th class="text-center">Tardanza</th>
+                                <th class="text-center">Estado</th>
+                                <th>Observaciones</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-log>
+                            <tr [class.row-absent]="log.isAbsent" [class.row-late]="log.isLate && !log.isAbsent">
+                                <td>
+                                    <div class="person-cell">
+                                        <div class="person-name">{{ log.studentName }}</div>
+                                        <div class="person-sub mono">{{ log.enrollmentNumber }}</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="grade-badge">{{ log.gradeName }} – {{ log.sectionName }}</span>
+                                </td>
+                                <td>
+                                    <span class="time-value" [class.time-late]="log.isLate">
+                                        {{ formatTime(log.entryTime) }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="time-value">{{ formatTime(log.exitTime) }}</span>
+                                </td>
+                                <td class="text-center">
+                                    @if (log.isLate) {
+                                    <p-tag value="Tardanza" severity="warn" />
+                                    } @else {
+                                    <i class="pi pi-check text-green-500"></i>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (log.isAbsent) {
+                                    <p-tag [value]="log.absenceJustified ? 'Justificada' : 'Injustificada'"
+                                        [severity]="log.absenceJustified ? 'info' : 'danger'" />
+                                    } @else {
+                                    <p-tag value="Presente" severity="success" />
+                                    }
+                                </td>
+                                <td>
+                                    <span class="obs-text">{{ log.observations ?? '–' }}</span>
+                                </td>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="emptymessage">
+                            <tr>
+                                <td colspan="7">
+                                    <div class="empty-tab">
+                                        <i class="pi pi-users"></i>
+                                        <p>Sin registros para esta fecha</p>
+                                        <button pButton icon="pi pi-plus" label="Registrar ahora"
+                                            class="p-button-primary p-button-sm" (click)="openAccessStudent()">
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
+                </p-tabpanel>
+
+                <!-- ── TAB 2: Acceso Personal ─────────────────────────────── -->
+                <p-tabpanel value="1">
+                    <div class="tab-toolbar">
+                        <div class="toolbar-left">
+                            <span class="p-input-icon-left">
+                                <i class="pi pi-search"></i>
+                                <input type="text" pInputText placeholder="Buscar empleado..." [(ngModel)]="searchStaff"
+                                    (keyup.enter)="onSearchStaff()" style="width: 260px" />
+                            </span>
+                        </div>
+                        <div class="toolbar-right">
+                            <button pButton icon="pi pi-plus" label="Registrar Acceso Personal"
+                                class="p-button-primary p-button-sm" (click)="openAccessStaff()">
+                            </button>
+                        </div>
+                    </div>
+
+                    <p-table [value]="staffLogs()" [loading]="loadingStaff()" styleClass="p-datatable-sm"
+                        [paginator]="true" [rows]="10" [rowsPerPageOptions]="[5,10,25]" responsiveLayout="scroll">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th>Empleado</th>
+                                <th>Tipo</th>
+                                <th>Entrada</th>
+                                <th>Salida</th>
+                                <th class="text-center">Tardanza</th>
+                                <th class="text-center">Estado</th>
+                                <th>Observaciones</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-log>
+                            <tr [class.row-absent]="log.isAbsent" [class.row-late]="log.isLate && !log.isAbsent">
+                                <td>
+                                    <div class="person-cell">
+                                        <div class="person-name">{{ log.staffName }}</div>
+                                        <div class="person-sub mono">{{ log.employeeNumber }}</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <p-tag [value]="getStaffTypeLabel(log.staffType)"
+                                        [severity]="getStaffTypeSeverity(log.staffType)" />
+                                </td>
+                                <td>
+                                    <span class="time-value" [class.time-late]="log.isLate">
+                                        {{ formatTime(log.entryTime) }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="time-value">{{ formatTime(log.exitTime) }}</span>
+                                </td>
+                                <td class="text-center">
+                                    @if (log.isLate) {
+                                    <p-tag value="Tardanza" severity="warn" />
+                                    } @else {
+                                    <i class="pi pi-check text-green-500"></i>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (log.isAbsent) {
+                                    <p-tag [value]="log.absenceJustified ? 'Justificada' : 'Injustificada'"
+                                        [severity]="log.absenceJustified ? 'info' : 'danger'" />
+                                    } @else {
+                                    <p-tag value="Presente" severity="success" />
+                                    }
+                                </td>
+                                <td><span class="obs-text">{{ log.observations ?? '–' }}</span></td>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="emptymessage">
+                            <tr>
+                                <td colspan="7">
+                                    <div class="empty-tab">
+                                        <i class="pi pi-id-card"></i>
+                                        <p>Sin registros de personal para esta fecha</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
+                </p-tabpanel>
+
+                <!-- ── TAB 3: Ausentes del día ────────────────────────────── -->
+                <p-tabpanel value="2">
+                    @if (absentStudents().length === 0 && !loadingAbsents()) {
+                    <div class="empty-tab success-empty">
+                        <i class="pi pi-check-circle"></i>
+                        <p>¡Sin ausentes registrados hoy!</p>
+                    </div>
+                    } @else {
+                    <div class="absent-grid">
+                        @for (log of absentStudents(); track log.idStudentAccessLog) {
+                        <div class="absent-card" [class.justified]="log.absenceJustified">
+                            <div class="absent-card-header">
+                                <div class="absent-avatar">
+                                    <i class="pi pi-user"></i>
+                                </div>
+                                <div class="absent-info">
+                                    <div class="absent-name">{{ log.studentName }}</div>
+                                    <!--<div class="absent-sub">{{ log.enrollmentNumber }}</div>-->
+                                </div>
+                                <p-tag [value]="log.absenceJustified ? 'Justificada' : 'Injustificada'"
+                                    [severity]="log.absenceJustified ? 'info' : 'danger'" styleClass="text-xs" />
+                            </div>
+                            <div class="absent-grade">
+                                {{ log.gradeName }} – {{ log.sectionName }}
+                            </div>
+                            @if (log.observations) {
+                            <div class="absent-obs">{{ log.observations }}</div>
+                            }
+                        </div>
+                        }
+                    </div>
+                    }
+                </p-tabpanel>
+
+                <!-- ── TAB 4: Retiros anticipados ─────────────────────────── -->
+                <p-tabpanel value="3">
+                    <div class="tab-toolbar">
+                        <div class="toolbar-left">
+                            <span class="p-input-icon-left">
+                                <i class="pi pi-search"></i>
+                                <input type="text" pInputText placeholder="Buscar alumno o persona que retira..."
+                                    [(ngModel)]="searchDeps" (keyup.enter)="onSearchDeps()" style="width: 300px" />
+                            </span>
+                        </div>
+                        <div class="toolbar-right">
+                            <button pButton icon="pi pi-plus" label="Registrar Retiro"
+                                class="p-button-warning p-button-sm" (click)="openDepartureDialog()">
+                            </button>
+                        </div>
+                    </div>
+
+                    <p-table [value]="earlyDepartures()" [loading]="loadingDeps()" styleClass="p-datatable-sm"
+                        [paginator]="true" [rows]="10" [rowsPerPageOptions]="[5,10,25]" responsiveLayout="scroll">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th>Alumno</th>
+                                <th>Grado</th>
+                                <th>Hora Retiro</th>
+                                <th>Persona que Retira</th>
+                                <th>Parentesco</th>
+                                <th>Autorizado por</th>
+                                <th>Motivo</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-dep>
+                            <tr>
+                                <td>
+                                    <div class="person-cell">
+                                        <div class="person-name">{{ dep.studentName }}</div>
+                                        <div class="person-sub mono">{{ dep.enrollmentNumber }}</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="grade-badge">{{ dep.gradeName }} – {{ dep.sectionName }}</span>
+                                </td>
+                                <td>
+                                    <span class="time-value">{{ formatDatetime(dep.departureDatetime) }}</span>
+                                </td>
+                                <td class="font-medium">{{ dep.pickupPersonName }}</td>
+                                <td>{{ getRelationshipLabel(dep.pickupPersonRelationship) }}</td>
+                                <td>{{ dep.authorizedByStaffName ?? '–' }}</td>
+                                <td><span class="obs-text">{{ dep.reason ?? '–' }}</span></td>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="emptymessage">
+                            <tr>
+                                <td colspan="7">
+                                    <div class="empty-tab">
+                                        <i class="pi pi-sign-out"></i>
+                                        <p>Sin retiros anticipados para esta fecha</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
+                </p-tabpanel>
+
+                <!-- ── TAB 5: Infracciones ────────────────────────────────── -->
+                <p-tabpanel value="4">
+                    <div class="tab-toolbar">
+                        <div class="toolbar-left">
+                            <span class="p-input-icon-left">
+                                <i class="pi pi-search"></i>
+                                <input type="text" pInputText placeholder="Buscar alumno o tipo..."
+                                    [(ngModel)]="searchInf" (keyup.enter)="onSearchInf()" style="width: 260px" />
+                            </span>
+                        </div>
+                        <div class="toolbar-right">
+                            <button pButton icon="pi pi-plus" label="Registrar Infracción"
+                                class="p-button-danger p-button-sm" (click)="openInfractionDialog()">
+                            </button>
+                        </div>
+                    </div>
+
+                    <p-table [value]="infractions()" [loading]="loadingInf()" styleClass="p-datatable-sm"
+                        [paginator]="true" [rows]="10" [rowsPerPageOptions]="[5,10,25]" responsiveLayout="scroll">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th>Alumno</th>
+                                <th>Grado</th>
+                                <th>Fecha</th>
+                                <th>Tipo</th>
+                                <th>Gravedad</th>
+                                <th>Descripción</th>
+                                <th>Sanción</th>
+                                <th class="text-center">Padres</th>
+                                <th class="text-center">Resuelto</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-inf>
+                            <tr [class.row-resolved]="inf.resolved">
+                                <td>
+                                    <div class="person-cell">
+                                        <div class="person-name">{{ inf.studentName }}</div>
+                                        <div class="person-sub mono">{{ inf.enrollmentNumber }}</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="grade-badge">{{ inf.gradeName }} – {{ inf.sectionName }}</span>
+                                </td>
+                                <td>{{ inf.incidentDate }}</td>
+                                <td class="font-medium">{{ inf.infractionTypeName }}</td>
+                                <td>
+                                    <p-tag [value]="getSeverityLabel(inf.severity ?? '')"
+                                        [severity]="getSeverityTag(inf.severity ?? '')" />
+                                </td>
+                                <td><span class="obs-text">{{ inf.description }}</span></td>
+                                <td><span class="obs-text">{{ inf.sanctionApplied ?? '–' }}</span></td>
+                                <td class="text-center">
+                                    <i
+                                        [class]="inf.parentNotified ? 'pi pi-check-circle text-green-500' : 'pi pi-times-circle text-red-400'"></i>
+                                </td>
+                                <td class="text-center">
+                                    @if (inf.resolved) {
+                                    <p-tag value="Sí" severity="success" />
+                                    } @else {
+                                    <p-tag value="Pendiente" severity="warn" />
+                                    }
+                                </td>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="emptymessage">
+                            <tr>
+                                <td colspan="9">
+                                    <div class="empty-tab">
+                                        <i class="pi pi-exclamation-circle"></i>
+                                        <p>Sin infracciones registradas</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
+                </p-tabpanel>
+
+            </p-tabpanels>
+        </p-tabs>
+    </div>
+</div>
+
+<p-toast position="top-right" />
+
+<!-- Modales -->
+<app-access-log-dialog [visible]="showAccessDialog()" [type]="accessDialogType()" [students]="students" [staff]="staff"
+    [defaultDate]="dateStr" (onSave)="onAccessSaved()" (onClose)="onDialogClosed()" />
+
+<app-early-departure-dialog [visible]="showDepartureDialog()" [students]="students" [staff]="staff"
+    [defaultDate]="dateStr" (onSave)="onDepartureSaved()" (onClose)="onDialogClosed()" />
+
+<app-infraction-dialog [visible]="showInfractionDialog()" [students]="students" (onSave)="onInfractionSaved()"
+    (onClose)="onDialogClosed()" />

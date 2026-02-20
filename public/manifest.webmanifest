@@ -1,0 +1,44 @@
+{
+    "name": "EasySys — Gestión Escolar",
+    "short_name": "EasySys",
+    "description": "Sistema de gestión escolar con control de acceso",
+    "theme_color": "#1e1e2e",
+    "background_color": "#1e1e2e",
+    "display": "standalone",
+    "scope": "/",
+    "start_url": "/",
+    "orientation": "portrait-primary",
+    "icons": [
+        { "src": "icons/icon-72x72.png", "sizes": "72x72", "type": "image/png", "purpose": "maskable any" },
+        { "src": "icons/icon-96x96.png", "sizes": "96x96", "type": "image/png", "purpose": "maskable any" },
+        { "src": "icons/icon-128x128.png", "sizes": "128x128", "type": "image/png", "purpose": "maskable any" },
+        { "src": "icons/icon-144x144.png", "sizes": "144x144", "type": "image/png", "purpose": "maskable any" },
+        { "src": "icons/icon-152x152.png", "sizes": "152x152", "type": "image/png", "purpose": "maskable any" },
+        { "src": "icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable any" },
+        { "src": "icons/icon-384x384.png", "sizes": "384x384", "type": "image/png", "purpose": "maskable any" },
+        { "src": "icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable any" }
+    ],
+    "screenshots": [
+        {
+            "src": "icons/screenshot-mobile.png",
+            "sizes": "390x844",
+            "type": "image/png",
+            "form_factor": "narrow",
+            "label": "EasySys — Control de Acceso"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Registrar Entrada",
+            "short_name": "Entrada",
+            "url": "/mobile/scanner/entrada",
+            "icons": [{ "src": "icons/icon-96x96.png", "sizes": "96x96" }]
+        },
+        {
+            "name": "Registrar Salida",
+            "short_name": "Salida",
+            "url": "/mobile/scanner/salida",
+            "icons": [{ "src": "icons/icon-96x96.png", "sizes": "96x96" }]
+        }
+    ]
+}

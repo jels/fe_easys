@@ -1,0 +1,470 @@
+<!-- src/app/modules/payments/payments.component.html -->
+<div class="payments-page">
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-header-content">
+            <div class="page-title-section">
+                <h1 class="page-title">
+                    <i class="pi pi-wallet"></i>
+                    Pagos y Finanzas
+                </h1>
+                <p class="page-subtitle">Control de recibos, cuotas y conceptos de pago</p>
+            </div>
+            <div class="header-actions">
+                <button pButton icon="pi pi-file-excel" label="Exportar"
+                    class="p-button-success p-button-outlined p-button-sm" (click)="exportToExcel()">
+                </button>
+                <button pButton icon="pi pi-plus" label="Registrar Pago" class="p-button-primary"
+                    (click)="openNewPayment()">
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    @if (stats()) {
+    <div class="stats-grid">
+        <div class="stat-card stat-month">
+            <div class="stat-icon"><i class="pi pi-calendar"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ formatCurrency(stats()!.totalCollectedMonth) }}</span>
+                <span class="stat-label">Recaudado este mes</span>
+                <span class="stat-sub">{{ stats()!.paymentsThisMonth }} pagos</span>
+            </div>
+        </div>
+        <div class="stat-card stat-year">
+            <div class="stat-icon"><i class="pi pi-chart-bar"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ formatCurrency(stats()!.totalCollectedYear) }}</span>
+                <span class="stat-label">Recaudado este año</span>
+            </div>
+        </div>
+        <div class="stat-card stat-pending">
+            <div class="stat-icon"><i class="pi pi-clock"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ formatCurrency(stats()!.pendingAmount) }}</span>
+                <span class="stat-label">Cuotas pendientes</span>
+                <span class="stat-sub">{{ stats()!.pendingCount }} cuota(s)</span>
+            </div>
+        </div>
+        <div class="stat-card stat-overdue">
+            <div class="stat-icon"><i class="pi pi-exclamation-circle"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ formatCurrency(stats()!.overdueAmount) }}</span>
+                <span class="stat-label">Monto vencido</span>
+                <span class="stat-sub">{{ stats()!.overdueCount }} cuota(s) vencida(s)</span>
+            </div>
+        </div>
+    </div>
+    }
+
+    <!-- Main Tabs -->
+    <div class="tabs-card">
+        <p-tabs [value]="activeTab()" (valueChange)="activeTab.set($event?.toString()  ?? '0')">
+            <p-tablist>
+                <p-tab value="0">
+                    <i class="pi pi-receipt mr-1"></i>
+                    Recibos
+                    @if (payments().length) {
+                    <span class="tab-badge">{{ payments().length }}</span>
+                    }
+                </p-tab>
+                <p-tab value="1">
+                    <i class="pi pi-list-check mr-1"></i>
+                    Cuotas
+                    @if (installments().length) {
+                    <span class="tab-badge tab-badge-blue">{{ installments().length }}</span>
+                    }
+                </p-tab>
+                <p-tab value="2">
+                    <i class="pi pi-exclamation-circle mr-1"></i>
+                    Vencidas
+                    @if (overdue().length) {
+                    <span class="tab-badge tab-badge-red">{{ overdue().length }}</span>
+                    }
+                </p-tab>
+                <p-tab value="3">
+                    <i class="pi pi-cog mr-1"></i>
+                    Conceptos
+                </p-tab>
+                <p-tab value="4">
+                    <i class="pi pi-chart-pie mr-1"></i>
+                    Resumen
+                </p-tab>
+            </p-tablist>
+
+            <p-tabpanels>
+
+                <!-- ── TAB 1: Recibos ─────────────────────────────────────── -->
+                <p-tabpanel value="0">
+                    <!-- Filtros -->
+                    <div class="tab-filters">
+                        <span class="p-input-icon-left filter-search">
+                            <i class="pi pi-search"></i>
+                            <input type="text" pInputText placeholder="Buscar por alumno, recibo o concepto..."
+                                [(ngModel)]="searchPay" (keyup.enter)="onSearchPay()" />
+                        </span>
+                        <p-select [options]="activeOptions" [(ngModel)]="filterActive" optionLabel="label"
+                            optionValue="value" placeholder="Estado" [showClear]="true" (onChange)="onFilterChange()"
+                            styleClass="w-full" />
+                        <button pButton icon="pi pi-search" label="Buscar" class="p-button-primary p-button-sm"
+                            (click)="onSearchPay()">
+                        </button>
+                        @if (hasActiveFilters) {
+                        <button pButton icon="pi pi-filter-slash" class="p-button-text p-button-sm"
+                            (click)="clearFilters()">
+                        </button>
+                        }
+                    </div>
+
+                    <p-table [value]="payments()" [loading]="loadingPay()" styleClass="p-datatable-sm"
+                        [paginator]="true" [rows]="10" [rowsPerPageOptions]="[5,10,25,50]"
+                        currentPageReportTemplate="Mostrando {first}–{last} de {totalRecords}"
+                        [showCurrentPageReport]="true" responsiveLayout="scroll">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th pSortableColumn="receiptNumber">Recibo <p-sortIcon field="receiptNumber" /></th>
+                                <th>Alumno</th>
+                                <th>Concepto</th>
+                                <th pSortableColumn="paymentDate">Fecha <p-sortIcon field="paymentDate" /></th>
+                                <th class="text-right">Monto</th>
+                                <th>Método</th>
+                                <th class="text-center">Estado</th>
+                                <th style="width:80px"></th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-pay>
+                            <tr [class.row-cancelled]="!pay.isActive">
+                                <td>
+                                    <span class="receipt-code">{{ pay.receiptNumber }}</span>
+                                </td>
+                                <td>
+                                    <div class="person-cell">
+                                        <div class="person-name">{{ pay.studentName }}</div>
+                                        <div class="person-sub mono">{{ pay.receiptNumber }}</div>
+                                    </div>
+                                </td>
+                                <td class="font-medium">{{ pay.paymentMethodName }}</td>
+                                <td>{{ pay.paymentDate }}</td>
+                                <td class="text-right">
+                                    <span class="amount-value">{{ formatCurrency(pay.amount) }}</span>
+                                </td>
+                                <td>
+                                    <div class="method-cell">
+                                        <i [class]="getMethodIcon(pay.paymentMethodName ?? '')"></i>
+                                        {{ pay.paymentMethodName }}
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <p-tag [value]="pay.isActive ? 'Activo' : 'Anulado'"
+                                        [severity]="pay.isActive ? 'success' : 'danger'" />
+                                </td>
+                                <td class="text-center">
+                                    <button pButton icon="pi pi-eye"
+                                        class="p-button-rounded p-button-text p-button-info" (click)="openDetail(pay)"
+                                        pTooltip="Ver detalle" tooltipPosition="top">
+                                    </button>
+                                </td>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="emptymessage">
+                            <tr>
+                                <td colspan="8">
+                                    <div class="empty-tab">
+                                        <i class="pi pi-receipt"></i>
+                                        <p>Sin pagos registrados</p>
+                                        <button pButton icon="pi pi-plus" label="Registrar Pago"
+                                            class="p-button-primary p-button-sm" (click)="openNewPayment()">
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
+                </p-tabpanel>
+
+                <!-- ── TAB 2: Cuotas ──────────────────────────────────────── -->
+                <p-tabpanel value="1">
+                    <div class="tab-toolbar">
+                        <div class="toolbar-left">
+                            <div class="inst-filter-group">
+                                <button pButton label="Todas"
+                                    [class]="instFilter === 'ALL' ? 'p-button-primary p-button-sm' : 'p-button-outlined p-button-sm'"
+                                    (click)="instFilter = 'ALL'; onInstFilterChange()">
+                                </button>
+                                <button pButton label="Pendientes"
+                                    [class]="instFilter === 'PENDING' ? 'p-button-info p-button-sm' : 'p-button-outlined p-button-info p-button-sm'"
+                                    (click)="instFilter = 'PENDING'; onInstFilterChange()">
+                                </button>
+                                <button pButton label="Vencidas"
+                                    [class]="instFilter === 'OVERDUE' ? 'p-button-danger p-button-sm' : 'p-button-outlined p-button-danger p-button-sm'"
+                                    (click)="instFilter = 'OVERDUE'; onInstFilterChange()">
+                                </button>
+                            </div>
+                        </div>
+                        <div class="toolbar-right">
+                            <button pButton icon="pi pi-plus" label="Registrar Pago"
+                                class="p-button-primary p-button-sm" (click)="openNewPayment()">
+                            </button>
+                        </div>
+                    </div>
+
+                    <p-table [value]="installments()" [loading]="loadingInst()" styleClass="p-datatable-sm"
+                        [paginator]="true" [rows]="10" [rowsPerPageOptions]="[5,10,25]" responsiveLayout="scroll">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th>Alumno</th>
+                                <th>Concepto</th>
+                                <th>Cuota</th>
+                                <th pSortableColumn="dueDate">Vencimiento <p-sortIcon field="dueDate" /></th>
+                                <th class="text-right">Monto</th>
+                                <th class="text-right">Saldo</th>
+                                <th class="text-center">Estado</th>
+                                <th style="width:90px"></th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-inst>
+                            <tr [class.row-overdue]="isOverdue(inst.dueDate) && inst.status !== 'PAID'">
+                                <td>
+                                    <div class="person-cell">
+                                        <div class="person-name">{{ getStudentForInstallment(inst) }}</div>
+                                        <div class="person-sub">{{ inst.conceptName ?? "–" }}</div>
+                                    </div>
+                                </td>
+                                <td class="font-medium">{{ getConceptForInstallment(inst) }}</td>
+                                <td>
+                                    <span class="installment-num"># {{ inst.installmentNumber }}</span>
+                                </td>
+                                <td>
+                                    <span [class.text-danger]="isOverdue(inst.dueDate) && inst.status !== 'PAID'">
+                                        {{ inst.dueDate }}
+                                    </span>
+                                </td>
+                                <td class="text-right">
+                                    <span class="amount-value">{{ formatCurrency(inst.amount) }}</span>
+                                </td>
+                                <td class="text-right">
+                                    <span [class.amount-danger]="inst.balance > 0">
+                                        {{ formatCurrency(inst.balance) }}
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <p-tag [value]="getInstStatusLabel(inst.status)"
+                                        [severity]="getInstStatusSeverity(inst.status)" />
+                                </td>
+                                <td class="text-center">
+                                    @if (inst.status !== 'PAID') {
+                                    <button pButton icon="pi pi-dollar"
+                                        class="p-button-rounded p-button-text p-button-success"
+                                        (click)="openNewPayment(inst)" pTooltip="Registrar pago" tooltipPosition="top">
+                                    </button>
+                                    }
+                                </td>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="emptymessage">
+                            <tr>
+                                <td colspan="8">
+                                    <div class="empty-tab">
+                                        <i class="pi pi-list-check"></i>
+                                        <p>Sin cuotas para mostrar</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
+                </p-tabpanel>
+
+                <!-- ── TAB 3: Cuotas Vencidas ─────────────────────────────── -->
+                <p-tabpanel value="2">
+                    @if (overdue().length === 0 && !loadingOver()) {
+                    <div class="empty-tab success-empty">
+                        <i class="pi pi-check-circle"></i>
+                        <p>¡Sin cuotas vencidas! Todo al día.</p>
+                    </div>
+                    } @else {
+                    <div class="overdue-summary">
+                        <span class="overdue-total">
+                            Total vencido:
+                            <strong>{{ formatCurrency(stats()?.overdueAmount ?? 0) }}</strong>
+                        </span>
+                        <span class="overdue-count">{{ overdue().length }} cuota(s)</span>
+                    </div>
+
+                    <p-table [value]="overdue()" [loading]="loadingOver()" styleClass="p-datatable-sm mt-3"
+                        [paginator]="overdue().length > 10" [rows]="10" responsiveLayout="scroll">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th>Alumno</th>
+                                <th>Concepto</th>
+                                <th>Cuota</th>
+                                <th>Vencimiento</th>
+                                <th class="text-right">Saldo</th>
+                                <th class="text-center">Días vencido</th>
+                                <th style="width:90px"></th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-inst>
+                            <tr>
+                                <td>
+                                    <div class="person-cell">
+                                        <div class="person-name">{{ getStudentForInstallment(inst) }}</div>
+                                        <div class="person-sub">{{ inst.conceptName ?? "–" }}</div>
+                                    </div>
+                                </td>
+                                <td class="font-medium">{{ getConceptForInstallment(inst) }}</td>
+                                <td><span class="installment-num"># {{ inst.installmentNumber }}</span></td>
+                                <td class="text-danger font-medium">{{ inst.dueDate }}</td>
+                                <td class="text-right">
+                                    <span class="amount-danger">{{ formatCurrency(inst.balance) }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="overdue-days">
+                                        {{ getDaysOverdue(inst.dueDate) }} días
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <button pButton icon="pi pi-dollar"
+                                        class="p-button-rounded p-button-text p-button-success"
+                                        (click)="openNewPayment(inst)" pTooltip="Cobrar ahora" tooltipPosition="top">
+                                    </button>
+                                </td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
+                    }
+                </p-tabpanel>
+
+                <!-- ── TAB 4: Conceptos ───────────────────────────────────── -->
+                <p-tabpanel value="3">
+                    <p-table [value]="concepts()" [loading]="loadingConcepts()" styleClass="p-datatable-sm"
+                        responsiveLayout="scroll">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Tipo</th>
+                                <th class="text-right">Monto Base</th>
+                                <th class="text-center">Cuotas</th>
+                                <th>Periodicidad</th>
+                                <th class="text-center">Activo</th>
+                                <th>Descripción</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-concept>
+                            <tr>
+                                <td class="font-semibold">{{ concept.name }}</td>
+                                <td>
+                                    <p-tag [value]="getConceptTypeLabel(concept.conceptCategory)"
+                                        [severity]="getConceptTypeSeverity(concept.conceptCategory)" />
+                                </td>
+                                <td class="text-right">
+                                    <span class="amount-value">{{ formatCurrency(concept.amount) }}</span>
+                                </td>
+                                <td class="text-center">{{ '–' }}</td>
+                                <td>{{ concept.recurrenceType ?? '–' }}</td>
+                                <td class="text-center">
+                                    <i
+                                        [class]="concept.isActive ? 'pi pi-check-circle text-green-500' : 'pi pi-times-circle text-red-400'"></i>
+                                </td>
+                                <td>
+                                    <span class="obs-text">{{ concept.description ?? '–' }}</span>
+                                </td>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="emptymessage">
+                            <tr>
+                                <td colspan="7">
+                                    <div class="empty-tab">
+                                        <i class="pi pi-cog"></i>
+                                        <p>Sin conceptos configurados</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
+                </p-tabpanel>
+
+                <!-- ── TAB 5: Resumen financiero ──────────────────────────── -->
+                <p-tabpanel value="4">
+                    @if (stats()) {
+                    <div class="financial-summary">
+
+                        <div class="summary-section">
+                            <h4 class="summary-section-title">
+                                <i class="pi pi-chart-bar"></i>
+                                Recaudación
+                            </h4>
+                            <div class="summary-grid">
+                                <div class="summary-item">
+                                    <span class="si-label">Este mes</span>
+                                    <span class="si-value success">{{ formatCurrency(stats()!.totalCollectedMonth)
+                                        }}</span>
+                                    <span class="si-sub">{{ stats()!.paymentsThisMonth }} pagos</span>
+                                </div>
+                                <div class="summary-item">
+                                    <span class="si-label">Este año</span>
+                                    <span class="si-value primary">{{ formatCurrency(stats()!.totalCollectedYear)
+                                        }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="summary-section">
+                            <h4 class="summary-section-title">
+                                <i class="pi pi-exclamation-circle"></i>
+                                Deuda pendiente
+                            </h4>
+                            <div class="summary-grid">
+                                <div class="summary-item">
+                                    <span class="si-label">Cuotas pendientes</span>
+                                    <span class="si-value info">{{ formatCurrency(stats()!.pendingAmount) }}</span>
+                                    <span class="si-sub">{{ stats()!.pendingCount }} cuota(s)</span>
+                                </div>
+                                <div class="summary-item">
+                                    <span class="si-label">Cuotas vencidas</span>
+                                    <span class="si-value danger">{{ formatCurrency(stats()!.overdueAmount) }}</span>
+                                    <span class="si-sub">{{ stats()!.overdueCount }} cuota(s) vencida(s)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="summary-section">
+                            <h4 class="summary-section-title">
+                                <i class="pi pi-list"></i>
+                                Conceptos activos
+                            </h4>
+                            <div class="concepts-summary-list">
+                                @for (concept of concepts(); track concept.idPaymentConcept) {
+                                @if (concept.isActive) {
+                                <div class="concept-summary-row">
+                                    <div class="concept-summary-info">
+                                        <span class="concept-summary-name">{{ concept.name }}</span>
+                                        <p-tag [value]="getConceptTypeLabel(concept.conceptCategory)"
+                                            [severity]="getConceptTypeSeverity(concept.conceptCategory)"
+                                            styleClass="text-xs" />
+                                    </div>
+                                    <span class="concept-summary-amount">{{ formatCurrency(concept.amount) }}</span>
+                                </div>
+                                }
+                                }
+                            </div>
+                        </div>
+
+                    </div>
+                    }
+                </p-tabpanel>
+
+            </p-tabpanels>
+        </p-tabs>
+    </div>
+</div>
+
+<p-toast position="top-right" />
+
+<!-- Modales -->
+<app-payment-form-dialog [visible]="showFormDialog()" [students]="students"
+    [preselectedInstallment]="preselectedInstallment()" (onSave)="onPaymentSaved()" (onClose)="onDialogClosed()" />
+
+<app-payment-detail-dialog [visible]="showDetailDialog()" [paymentId]="selectedPaymentId()"
+    (onClose)="onDialogClosed()" />

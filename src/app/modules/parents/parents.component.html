@@ -1,0 +1,229 @@
+<!-- src/app/modules/parents/parents.component.html -->
+<div class="parents-page">
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-header-content">
+            <div class="page-title-section">
+                <h1 class="page-title">
+                    <i class="pi pi-heart"></i>
+                    Padres y Tutores
+                </h1>
+                <p class="page-subtitle">Gestión de padres, madres y tutores legales</p>
+            </div>
+            <button pButton icon="pi pi-plus" label="Nuevo Tutor" class="p-button-primary" (click)="openCreate()">
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters Card -->
+    <div class="filters-card">
+        <div class="filters-header">
+            <h3 class="filters-title">
+                <i class="pi pi-filter"></i>
+                Filtros
+            </h3>
+            @if (hasActiveFilters) {
+            <button pButton icon="pi pi-filter-slash" label="Limpiar" class="p-button-text p-button-sm"
+                (click)="clearFilters()">
+            </button>
+            }
+        </div>
+        <div class="filters-content">
+            <!-- Search -->
+            <div class="filter-item filter-search">
+                <span class="p-input-icon-left w-full">
+                    <i class="pi pi-search"></i>
+                    <input type="text" pInputText placeholder="Buscar por nombre, CI, email o teléfono..."
+                        [(ngModel)]="searchQuery" (keyup.enter)="onSearch()" class="w-full" />
+                </span>
+            </div>
+
+            <!-- Financial filter -->
+            <div class="filter-item">
+                <p-select [options]="financialOptions" [(ngModel)]="selectedFinancialFilter" optionLabel="label"
+                    optionValue="value" placeholder="Responsabilidad financiera" [showClear]="true"
+                    (onChange)="onFilterChange()" styleClass="w-full">
+                </p-select>
+            </div>
+
+            <!-- Search button -->
+            <div class="filter-item">
+                <button pButton icon="pi pi-search" label="Buscar" class="p-button-primary w-full" (click)="onSearch()">
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions Bar -->
+    <div class="actions-bar">
+        <div class="actions-left">
+            @if (!loading()) {
+            <span class="results-count">
+                <i class="pi pi-users"></i>
+                {{ totalRecords() }} tutor(es) encontrado(s)
+            </span>
+            }
+        </div>
+        <div class="actions-right">
+            <button pButton icon="pi pi-refresh" label="Actualizar" class="p-button-outlined p-button-sm"
+                (click)="loadParents()" [disabled]="loading()">
+            </button>
+            <button pButton icon="pi pi-file-excel" label="Exportar"
+                class="p-button-success p-button-outlined p-button-sm" (click)="exportToExcel()">
+            </button>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="table-card">
+        <p-table [value]="parents()" [loading]="loading()" [paginator]="true" [rows]="pageSize"
+            [totalRecords]="totalRecords()" [lazy]="true" (onLazyLoad)="onPageChange($event)"
+            [rowsPerPageOptions]="pageSizeOptions" [showCurrentPageReport]="true"
+            currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} tutores" dataKey="idParent"
+            styleClass="p-datatable-striped" responsiveLayout="scroll">
+
+            <!-- Loading -->
+            <ng-template pTemplate="loadingbody">
+                <tr *ngFor="let i of [1,2,3,4,5]">
+                    <td colspan="6"><p-skeleton height="2.5rem" /></td>
+                </tr>
+            </ng-template>
+
+            <!-- Header -->
+            <ng-template pTemplate="header">
+                <tr>
+                    <th style="width: 60px"></th>
+                    <th pSortableColumn="fullName">
+                        Nombre <p-sortIcon field="fullName" />
+                    </th>
+                    <th>Documento</th>
+                    <th>Contacto</th>
+                    <th>Ocupación / Trabajo</th>
+                    <th style="width: 130px; text-align:center">Resp. Financiero</th>
+                    <th style="width: 90px; text-align:center">Estado</th>
+                    <th style="width: 160px; text-align:center">Acciones</th>
+                </tr>
+            </ng-template>
+
+            <!-- Body -->
+            <ng-template pTemplate="body" let-parent>
+                <tr>
+                    <!-- Avatar con iniciales -->
+                    <td>
+                        <div class="parent-avatar" (click)="openDetail(parent)">
+                            <span class="initials">{{ getInitials(parent.fullName) }}</span>
+                        </div>
+                    </td>
+
+                    <!-- Nombre -->
+                    <td>
+                        <div class="parent-name-cell" (click)="openDetail(parent)">
+                            <div class="parent-name">{{ parent.fullName }}</div>
+                            @if (parent.person.gender) {
+                            <div class="parent-sub">
+                                {{ parent.person.gender === 'MALE' ? 'Padre' : 'Madre/Tutora' }}
+                            </div>
+                            }
+                        </div>
+                    </td>
+
+                    <!-- Documento -->
+                    <td>
+                        <span class="doc-badge">{{ parent.person.documentType }}</span>
+                        <span class="parent-sub ml-1">{{ parent.person.documentNumber }}</span>
+                    </td>
+
+                    <!-- Contacto -->
+                    <td>
+                        @if (parent.person.mobilePhone) {
+                        <div class="parent-sub">
+                            <i class="pi pi-phone mr-1"></i>{{ parent.person.mobilePhone }}
+                        </div>
+                        }
+                        @if (parent.person.email) {
+                        <a [href]="'mailto:' + parent.person.email" class="parent-email">
+                            {{ parent.person.email }}
+                        </a>
+                        }
+                    </td>
+
+                    <!-- Ocupación -->
+                    <td>
+                        @if (parent.occupation) {
+                        <div class="parent-name" style="font-weight:500">{{ parent.occupation }}</div>
+                        }
+                        @if (parent.workplace) {
+                        <div class="parent-sub">{{ parent.workplace }}</div>
+                        }
+                        @if (!parent.occupation && !parent.workplace) {
+                        <span class="text-muted">–</span>
+                        }
+                    </td>
+
+                    <!-- Responsable financiero -->
+                    <td class="text-center">
+                        @if (parent.isFinancialResponsible) {
+                        <p-tag value="Sí" severity="success" />
+                        } @else {
+                        <p-tag value="No" severity="secondary" />
+                        }
+                    </td>
+
+                    <!-- Estado -->
+                    <td class="text-center">
+                        <p-tag [value]="parent.isActive ? 'Activo' : 'Inactivo'"
+                            [severity]="parent.isActive ? 'success' : 'danger'" />
+                    </td>
+
+                    <!-- Acciones -->
+                    <td>
+                        <div class="action-buttons">
+                            <button pButton icon="pi pi-eye" class="p-button-rounded p-button-text p-button-info"
+                                (click)="openDetail(parent)" pTooltip="Ver detalle" tooltipPosition="top">
+                            </button>
+                            <button pButton icon="pi pi-pencil" class="p-button-rounded p-button-text p-button-warning"
+                                (click)="openEdit(parent)" pTooltip="Editar" tooltipPosition="top">
+                            </button>
+                            <button pButton [icon]="parent.isActive ? 'pi pi-ban' : 'pi pi-check'"
+                                class="p-button-rounded p-button-text"
+                                [ngClass]="parent.isActive ? 'p-button-secondary' : 'p-button-success'"
+                                (click)="toggleActive(parent)" [pTooltip]="parent.isActive ? 'Desactivar' : 'Activar'"
+                                tooltipPosition="top">
+                            </button>
+                            <button pButton icon="pi pi-trash" class="p-button-rounded p-button-text p-button-danger"
+                                (click)="deleteParent(parent)" pTooltip="Eliminar" tooltipPosition="top">
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+
+            <!-- Empty -->
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="8">
+                        <div class="empty-state">
+                            <i class="pi pi-heart"></i>
+                            <h3>No se encontraron tutores</h3>
+                            <p>No hay padres/tutores que coincidan con los filtros aplicados</p>
+                            <button pButton icon="pi pi-plus" label="Agregar Tutor" class="p-button-primary"
+                                (click)="openCreate()">
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+</div>
+
+<p-toast position="top-right" />
+<p-confirmDialog />
+
+<!-- Modales -->
+<app-parent-form-dialog [visible]="showFormDialog()" [parentId]="selectedParentId()" (onSave)="onFormSaved()"
+    (onClose)="onFormClosed()" />
+
+<app-parent-detail-dialog [visible]="showDetailDialog()" [parentId]="selectedParentId()" (onEdit)="openEdit($event)"
+    (onClose)="onDetailClosed()" />

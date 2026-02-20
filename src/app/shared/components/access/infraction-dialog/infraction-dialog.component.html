@@ -1,0 +1,90 @@
+<!-- src/app/shared/components/access/infraction-dialog/infraction-dialog.component.html -->
+<p-dialog header="Registrar Infracción" [(visible)]="visible" [modal]="true" [draggable]="false" [resizable]="false"
+    [style]="{ width: '560px', maxWidth: '95vw' }" [closeOnEscape]="true" (onHide)="close()">
+
+    <ng-template pTemplate="header">
+        <div class="dialog-header">
+            <div class="dialog-icon">
+                <i class="pi pi-exclamation-triangle"></i>
+            </div>
+            <div>
+                <h3 class="dialog-title">Registrar Infracción</h3>
+                <p class="dialog-subtitle">Complete el formulario para registrar una infracción disciplinaria</p>
+            </div>
+        </div>
+    </ng-template>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="form-body">
+
+        <div class="field">
+            <label>Alumno <span class="req">*</span></label>
+            <p-select formControlName="idStudent" [options]="studentOptions" optionLabel="label" optionValue="value"
+                placeholder="Seleccionar alumno" [filter]="true" filterPlaceholder="Buscar..." [showClear]="true"
+                [class.ng-invalid]="isFieldInvalid('idStudent')" styleClass="w-full" />
+            @if (isFieldInvalid('idStudent')) {
+            <small class="error-msg">Seleccione un alumno</small>
+            }
+        </div>
+
+        <div class="form-grid">
+            <div class="field">
+                <label>Tipo de Infracción <span class="req">*</span></label>
+                <p-select formControlName="idInfractionType" [options]="typeOptions" optionLabel="label"
+                    optionValue="value" placeholder="Seleccionar tipo"
+                    [class.ng-invalid]="isFieldInvalid('idInfractionType')" styleClass="w-full" />
+                @if (isFieldInvalid('idInfractionType')) {
+                <small class="error-msg">Seleccione un tipo</small>
+                }
+            </div>
+
+            <div class="field">
+                <label>Fecha del Incidente <span class="req">*</span></label>
+                <p-datepicker formControlName="incidentDate" dateFormat="dd/mm/yy" [showIcon]="true"
+                    placeholder="DD/MM/AAAA" />
+            </div>
+        </div>
+
+        <!-- Severidad del tipo seleccionado (readonly) -->
+        @if (selectedSeverity()) {
+        <div class="severity-preview">
+            <span class="severity-label-text">Gravedad:</span>
+            <p-tag [value]="getSeverityLabel(selectedSeverity())" [severity]="getSeverityTag(selectedSeverity())" />
+        </div>
+        }
+
+        <div class="field">
+            <label>Descripción <span class="req">*</span></label>
+            <textarea pTextarea formControlName="description" rows="3"
+                placeholder="Describe el incidente con detalle..." [class.ng-invalid]="isFieldInvalid('description')"
+                class="w-full resize-none">
+            </textarea>
+            @if (isFieldInvalid('description')) {
+            <small class="error-msg">La descripción es requerida</small>
+            }
+        </div>
+
+        <div class="field">
+            <label>Sanción Aplicada</label>
+            <input pInputText formControlName="sanctionApplied"
+                placeholder="Ej: Amonestación verbal, 2 días de suspensión..." />
+        </div>
+
+        <div class="field field-switch">
+            <label>¿Se notificó a los padres?</label>
+            <div class="switch-row">
+                <p-toggleswitch formControlName="parentNotified" />
+                <span class="switch-hint">
+                    {{ form.get('parentNotified')?.value ? 'Sí, padres notificados' : 'No notificados aún' }}
+                </span>
+            </div>
+        </div>
+    </form>
+
+    <ng-template pTemplate="footer">
+        <div class="dialog-footer">
+            <p-button label="Cancelar" icon="pi pi-times" severity="secondary" [text]="true" (onClick)="close()" />
+            <p-button label="Registrar Infracción" icon="pi pi-exclamation-triangle" severity="danger"
+                [loading]="loading()" (onClick)="onSubmit()" />
+        </div>
+    </ng-template>
+</p-dialog>

@@ -1,0 +1,370 @@
+<!-- src/app/shared/components/student/student-detail-dialog/student-detail-dialog.component.html -->
+<p-dialog [(visible)]="visible" [modal]="true" [draggable]="false" [resizable]="false"
+    styleClass="student-detail-dialog" [style]="{ width: '900px', maxWidth: '95vw' }" [closeOnEscape]="true"
+    (onHide)="close()">
+
+    <!-- Header personalizado -->
+    <ng-template pTemplate="header">
+        @if (loading()) {
+        <div class="dialog-header-skeleton">
+            <p-skeleton shape="circle" size="3rem" />
+            <div class="flex flex-col gap-1 flex-1">
+                <p-skeleton height="1.2rem" width="40%" />
+                <p-skeleton height="0.9rem" width="25%" />
+            </div>
+        </div>
+        } @else if (student()) {
+        <div class="dialog-header">
+            <div class="student-avatar-lg">
+                <i class="pi pi-user"></i>
+            </div>
+            <div class="dialog-header-info">
+                <h3 class="dialog-title">{{ fullName }}</h3>
+                <div class="dialog-header-meta">
+                    <span class="enrollment-code">{{ student()!.enrollmentNumber }}</span>
+                    <p-tag [value]="getStatusLabel(student()!.status)" [severity]="getStatusSeverity(student()!.status)"
+                        styleClass="text-xs" />
+                    <span class="grade-chip">{{ student()!.gradeName }} – {{ student()!.sectionName }}</span>
+                </div>
+            </div>
+            <p-button label="Editar" icon="pi pi-pencil" severity="secondary" size="small" (onClick)="editStudent()" />
+        </div>
+        }
+    </ng-template>
+
+    <!-- Body -->
+    @if (loading()) {
+    <div class="flex flex-col gap-3 p-4">
+        @for (i of [1,2,3]; track i) {
+        <p-skeleton height="3rem" />
+        }
+    </div>
+    } @else if (student()) {
+    <p-tabs>
+        <p-tablist>
+            <p-tab value="0"><i class="pi pi-user mr-1"></i> Personal</p-tab>
+            <p-tab value="1"><i class="pi pi-book mr-1"></i> Académico</p-tab>
+            <p-tab value="2"><i class="pi pi-users mr-1"></i> Tutores ({{ parents().length }})</p-tab>
+            <p-tab value="3"><i class="pi pi-chart-line mr-1"></i> Notas</p-tab>
+            <p-tab value="4"><i class="pi pi-wallet mr-1"></i> Pagos</p-tab>
+            <p-tab value="5"><i class="pi pi-clock mr-1"></i> Accesos</p-tab>
+            <p-tab value="6"><i class="pi pi-exclamation-circle mr-1"></i> Infracciones</p-tab>
+        </p-tablist>
+
+        <p-tabpanels>
+
+            <!-- ── TAB 1: Datos Personales ──────────────────────────────── -->
+            <p-tabpanel value="0">
+                <div class="detail-grid">
+                    <div class="detail-field">
+                        <span class="field-label">Nombres</span>
+                        <span class="field-value">{{ student()!.person.firstName }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Apellidos</span>
+                        <span class="field-value">{{ student()!.person.lastName }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Tipo Documento</span>
+                        <span class="field-value">{{ student()!.person.documentType }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Nro. Documento</span>
+                        <span class="field-value mono">{{ student()!.person.documentNumber }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Fecha de Nacimiento</span>
+                        <span class="field-value">{{ student()!.person.birthDate ?? '–' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Género</span>
+                        <span class="field-value">{{ student()!.person.gender ?? '–' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Grupo Sanguíneo</span>
+                        <span class="field-value">{{ student()!.person.bloodType ?? '–' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Celular</span>
+                        <span class="field-value">{{ student()!.person.mobilePhone ?? '–' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Teléfono</span>
+                        <span class="field-value">{{ student()!.person.phone ?? '–' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Email</span>
+                        <span class="field-value">{{ student()!.person.email ?? '–' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Ciudad</span>
+                        <span class="field-value">{{ student()!.person.city ?? '–' }}</span>
+                    </div>
+                    <div class="detail-field span-2">
+                        <span class="field-label">Dirección</span>
+                        <span class="field-value">{{ student()!.person.address ?? '–' }}</span>
+                    </div>
+                </div>
+            </p-tabpanel>
+
+            <!-- ── TAB 2: Académico ─────────────────────────────────────── -->
+            <p-tabpanel value="1">
+                <div class="detail-grid">
+                    <div class="detail-field">
+                        <span class="field-label">Matrícula</span>
+                        <span class="field-value mono">{{ student()!.enrollmentNumber }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Fecha Inscripción</span>
+                        <span class="field-value">{{ student()!.enrollmentDate }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Estado</span>
+                        <p-tag [value]="getStatusLabel(student()!.status)"
+                            [severity]="getStatusSeverity(student()!.status)" />
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Sucursal</span>
+                        <span class="field-value">{{ student()!.branchName }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Grado</span>
+                        <span class="field-value">{{ student()!.gradeName }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Sección</span>
+                        <span class="field-value">{{ student()!.sectionName }}</span>
+                    </div>
+                    <div class="detail-field span-2">
+                        <span class="field-label">Observaciones Médicas</span>
+                        <span class="field-value">{{ student()!.medicalObservations ?? '–' }}</span>
+                    </div>
+                </div>
+
+                <p-divider align="left">
+                    <small class="text-muted">Contacto de Emergencia</small>
+                </p-divider>
+
+                <div class="detail-grid">
+                    <div class="detail-field">
+                        <span class="field-label">Nombre</span>
+                        <span class="field-value">{{ student()!.emergencyContactName ?? '–' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Teléfono</span>
+                        <span class="field-value">{{ student()!.emergencyContactPhone ?? '–' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Parentesco</span>
+                        <span class="field-value">{{ getRelationshipLabel(student()!.emergencyContactRelationship ?? '')
+                            }}</span>
+                    </div>
+                </div>
+            </p-tabpanel>
+
+            <!-- ── TAB 3: Tutores ───────────────────────────────────────── -->
+            <p-tabpanel value="2">
+                <p-table [value]="parents()" styleClass="p-datatable-sm mt-3" [paginator]="parents().length > 5"
+                    [rows]="5">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Parentesco</th>
+                            <th>Teléfono</th>
+                            <th>Email</th>
+                            <th class="text-center">Contacto Principal</th>
+                            <th class="text-center">Autorizado Retiro</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-sp>
+                        <tr>
+                            <td class="font-medium">{{ sp.parentName ?? '–' }}</td>
+                            <td>{{ getRelationshipLabel(sp.relationship) }}</td>
+                            <td>{{ sp.parentPhone ?? '–' }}</td>
+                            <td>{{ sp.parentEmail ?? '–' }}</td>
+                            <td class="text-center">
+                                <i
+                                    [class]="sp.isPrimaryContact ? 'pi pi-check-circle text-green-500' : 'pi pi-times-circle text-red-400'"></i>
+                            </td>
+                            <td class="text-center">
+                                <i
+                                    [class]="sp.isAuthorizedPickup ? 'pi pi-check-circle text-green-500' : 'pi pi-times-circle text-red-400'"></i>
+                            </td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted-color">
+                                <i class="pi pi-users text-2xl block mb-2"></i>
+                                No hay tutores vinculados
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </p-tabpanel>
+
+            <!-- ── TAB 4: Notas ─────────────────────────────────────────── -->
+            <p-tabpanel value="3">
+                <p-table [value]="scores()" styleClass="p-datatable-sm mt-3" [paginator]="scores().length > 8"
+                    [rows]="8">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th>Materia</th>
+                            <th>Período</th>
+                            <th>Docente</th>
+                            <th class="text-center">Nota</th>
+                            <th>Fecha</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-score>
+                        <tr>
+                            <td>
+                                <span class="font-medium">{{ score.subjectName }}</span>
+                                <span class="subject-code ml-1">{{ score.subjectCode }}</span>
+                            </td>
+                            <td>{{ score.schoolPeriodName }}</td>
+                            <td>{{ score.teacherName ?? '–' }}</td>
+                            <td class="text-center">
+                                <span [class]="'score-badge ' + (score.score >= 7 ? 'score-ok' : 'score-low')">
+                                    {{ score.score }} / {{ score.maxScore }}
+                                </span>
+                            </td>
+                            <td>{{ score.gradedAt ?? '–' }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="5" class="text-center py-5 text-muted-color">
+                                Sin notas registradas
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </p-tabpanel>
+
+            <!-- ── TAB 5: Pagos ─────────────────────────────────────────── -->
+            <p-tabpanel value="4">
+                <p-table [value]="installments()" styleClass="p-datatable-sm mt-3"
+                    [paginator]="installments().length > 8" [rows]="8">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th>Concepto</th>
+                            <th>Cuota</th>
+                            <th>Vencimiento</th>
+                            <th class="text-right">Monto</th>
+                            <th class="text-right">Saldo</th>
+                            <th class="text-center">Estado</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-inst>
+                        <tr>
+                            <td>{{ inst.conceptName }}</td>
+                            <td>{{ inst.installmentNumber }}</td>
+                            <td>{{ inst.dueDate }}</td>
+                            <td class="text-right mono">{{ formatCurrency(inst.amount) }}</td>
+                            <td class="text-right mono">{{ formatCurrency(inst.balance) }}</td>
+                            <td class="text-center">
+                                <p-tag [value]="getInstallmentLabel(inst.status)"
+                                    [severity]="getInstallmentSeverity(inst.status)" />
+                            </td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted-color">
+                                Sin cuotas registradas
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </p-tabpanel>
+
+            <!-- ── TAB 6: Accesos ───────────────────────────────────────── -->
+            <p-tabpanel value="5">
+                <p-table [value]="accessLogs()" styleClass="p-datatable-sm mt-3" [paginator]="accessLogs().length > 8"
+                    [rows]="8">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Entrada</th>
+                            <th>Salida</th>
+                            <th class="text-center">Tardanza</th>
+                            <th class="text-center">Ausente</th>
+                            <th>Observaciones</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-log>
+                        <tr>
+                            <td>{{ log.accessDate }}</td>
+                            <td>{{ log.entryTime ? formatDateTime(log.entryTime) : '–' }}</td>
+                            <td>{{ log.exitTime ? formatDateTime(log.exitTime) : '–' }}</td>
+                            <td class="text-center">
+                                <i
+                                    [class]="log.isLate ? 'pi pi-clock text-orange-400' : 'pi pi-check text-green-400'"></i>
+                            </td>
+                            <td class="text-center">
+                                @if (log.isAbsent) {
+                                <p-tag [value]="log.absenceJustified ? 'Justificada' : 'Injustificada'"
+                                    [severity]="log.absenceJustified ? 'warn' : 'danger'" />
+                                } @else {
+                                <i class="pi pi-check text-green-400"></i>
+                                }
+                            </td>
+                            <td>{{ log.observations ?? '–' }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted-color">
+                                Sin registros de acceso
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </p-tabpanel>
+
+            <!-- ── TAB 7: Infracciones ──────────────────────────────────── -->
+            <p-tabpanel value="6">
+                <p-table [value]="infractions()" styleClass="p-datatable-sm mt-3" [paginator]="infractions().length > 5"
+                    [rows]="5">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Tipo</th>
+                            <th>Gravedad</th>
+                            <th>Descripción</th>
+                            <th>Sanción</th>
+                            <th class="text-center">Padres Notif.</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-inf>
+                        <tr>
+                            <td>{{ inf.incidentDate }}</td>
+                            <td class="font-medium">{{ inf.infractionTypeName }}</td>
+                            <td>
+                                <p-tag [value]="getSeverityLabel(inf.severity ?? '')"
+                                    [severity]="getSeverityTag(inf.severity ?? '')" />
+                            </td>
+                            <td>{{ inf.description }}</td>
+                            <td>{{ inf.sanctionApplied ?? '–' }}</td>
+                            <td class="text-center">
+                                <i
+                                    [class]="inf.parentNotified ? 'pi pi-check-circle text-green-500' : 'pi pi-times-circle text-red-400'"></i>
+                            </td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted-color">
+                                Sin infracciones registradas
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </p-tabpanel>
+
+        </p-tabpanels>
+    </p-tabs>
+    }
+
+</p-dialog>

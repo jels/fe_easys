@@ -1,0 +1,11 @@
+// src/app/modules/events/events.routes.ts
+import { Routes } from '@angular/router';
+import { EventsComponent } from './events.component';
+
+export const eventsRoutes: Routes = [
+    {
+        path: '',
+        component: EventsComponent,
+        data: { breadcrumb: 'Eventos' }
+    }
+];

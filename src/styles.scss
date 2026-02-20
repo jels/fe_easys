@@ -1,0 +1,8 @@
+@use './assets/tailwind.css';
+@use './assets/layout/layout.scss';
+@use 'primeicons/primeicons.css';
+@use './assets/demo/demo.scss';
+
+::ng-deep .custom-confirmation-z {
+    z-index: 9999 !important; // o superior al modal PrimeNG
+}

@@ -1,0 +1,206 @@
+<div class="card">
+    <!-- Header -->
+    <div class="flex items-center gap-3 mb-6">
+        <p-button icon="pi pi-arrow-left" [text]="true" [rounded]="true" severity="secondary" (onClick)="goBack()" />
+        <div>
+            <h2 class="text-2xl font-semibold text-surface-900 dark:text-surface-0 m-0">
+                {{ isEditMode() ? 'Editar Personal' : 'Nuevo Personal' }}
+            </h2>
+            <p class="text-muted-color mt-1 mb-0">
+                {{ isEditMode() ? 'Actualice los datos del empleado' : 'Complete los datos para registrar un nuevo
+                empleado' }}
+            </p>
+        </div>
+    </div>
+
+    @if (loadingData()) {
+    <div class="flex flex-col gap-4">
+        @for (i of [1,2,3,4]; track i) {
+        <p-skeleton height="3.5rem" />
+        }
+    </div>
+    } @else {
+    <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <p-stepper [value]="activeStep()" (valueChange)="activeStep.set($event ? $event : 1)">
+            <p-step-list>
+                <p-step [value]="0">Datos Personales</p-step>
+                <p-step [value]="1">Datos Laborales</p-step>
+            </p-step-list>
+
+            <p-step-panels>
+                <!-- Panel 1: Datos Personales -->
+                <p-step-panel [value]="0">
+                    <ng-template #content let-activateCallback="activateCallback">
+                        <div formGroupName="person" class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
+
+                            <div class="flex flex-col gap-2">
+                                <label class="font-medium">Nombres <span class="text-red-500">*</span></label>
+                                <input pInputText formControlName="firstName" placeholder="Ej: María Elena"
+                                    [class.ng-invalid]="isFieldInvalid('person.firstName')" />
+                                @if (isFieldInvalid('person.firstName')) {
+                                <small class="text-red-500">El nombre es requerido</small>
+                                }
+                            </div>
+
+                            <div class="flex flex-col gap-2">
+                                <label class="font-medium">Apellidos <span class="text-red-500">*</span></label>
+                                <input pInputText formControlName="lastName" placeholder="Ej: Rodríguez de González"
+                                    [class.ng-invalid]="isFieldInvalid('person.lastName')" />
+                                @if (isFieldInvalid('person.lastName')) {
+                                <small class="text-red-500">El apellido es requerido</small>
+                                }
+                            </div>
+
+                            <div class="flex flex-col gap-2">
+                                <label class="font-medium">Tipo de Documento <span class="text-red-500">*</span></label>
+                                <p-select formControlName="documentType" [options]="documentTypeOptions"
+                                    optionLabel="label" optionValue="value" placeholder="Seleccionar" />
+                            </div>
+
+                            <div class="flex flex-col gap-2">
+                                <label class="font-medium">Nro. de Documento <span class="text-red-500">*</span></label>
+                                <input pInputText formControlName="documentNumber" placeholder="Ej: 1234567"
+                                    [class.ng-invalid]="isFieldInvalid('person.documentNumber')" />
+                                @if (isFieldInvalid('person.documentNumber')) {
+                                <small class="text-red-500">El documento es requerido</small>
+                                }
+                            </div>
+
+                            <div class="flex flex-col gap-2">
+                                <label class="font-medium">Fecha de Nacimiento</label>
+                                <p-datepicker formControlName="birthDate" dateFormat="dd/mm/yy" [showIcon]="true"
+                                    placeholder="DD/MM/AAAA" />
+                            </div>
+
+                            <div class="flex flex-col gap-2">
+                                <label class="font-medium">Género</label>
+                                <p-select formControlName="gender" [options]="genderOptions" optionLabel="label"
+                                    optionValue="value" placeholder="Seleccionar" />
+                            </div>
+
+                            <div class="flex flex-col gap-2">
+                                <label class="font-medium">Grupo Sanguíneo</label>
+                                <p-select formControlName="bloodType" [options]="bloodTypeOptions" optionLabel="label"
+                                    optionValue="value" placeholder="Seleccionar" />
+                            </div>
+
+                            <div class="flex flex-col gap-2">
+                                <label class="font-medium">Teléfono</label>
+                                <input pInputText formControlName="phone" placeholder="Ej: 021-000000" />
+                            </div>
+
+                            <div class="flex flex-col gap-2">
+                                <label class="font-medium">Celular</label>
+                                <input pInputText formControlName="mobilePhone" placeholder="Ej: 0981-000000" />
+                            </div>
+
+                            <div class="flex flex-col gap-2">
+                                <label class="font-medium">Email</label>
+                                <input pInputText formControlName="email" type="email"
+                                    placeholder="correo@institución.edu.py"
+                                    [class.ng-invalid]="isFieldInvalid('person.email')" />
+                                @if (isFieldInvalid('person.email')) {
+                                <small class="text-red-500">Ingrese un email válido</small>
+                                }
+                            </div>
+
+                            <div class="flex flex-col gap-2">
+                                <label class="font-medium">Ciudad</label>
+                                <input pInputText formControlName="city" placeholder="Ej: Asunción" />
+                            </div>
+
+                            <div class="flex flex-col gap-2 md:col-span-2">
+                                <label class="font-medium">Dirección</label>
+                                <input pInputText formControlName="address" placeholder="Calle, número, barrio" />
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end mt-6">
+                            <p-button label="Siguiente" icon="pi pi-arrow-right" iconPos="right"
+                                (onClick)="activateCallback(1)" />
+                        </div>
+                    </ng-template>
+                </p-step-panel>
+
+                <!-- Panel 2: Datos Laborales -->
+                <p-step-panel [value]="1">
+                    <ng-template #content let-activateCallback="activateCallback">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
+
+                            <div class="flex flex-col gap-2">
+                                <label class="font-medium">Nro. de Legajo <span class="text-red-500">*</span></label>
+                                <input pInputText formControlName="employeeNumber" placeholder="Ej: EMP-2024-001"
+                                    [class.ng-invalid]="isFieldInvalid('employeeNumber')" />
+                                @if (isFieldInvalid('employeeNumber')) {
+                                <small class="text-red-500">El legajo es requerido</small>
+                                }
+                            </div>
+
+                            <div class="flex flex-col gap-2">
+                                <label class="font-medium">Fecha de Contratación <span
+                                        class="text-red-500">*</span></label>
+                                <p-datepicker formControlName="hireDate" dateFormat="dd/mm/yy" [showIcon]="true"
+                                    placeholder="DD/MM/AAAA" />
+                            </div>
+
+                            <div class="flex flex-col gap-2">
+                                <label class="font-medium">Tipo <span class="text-red-500">*</span></label>
+                                <p-select formControlName="staffType" [options]="staffTypeOptions" optionLabel="label"
+                                    optionValue="value" placeholder="Seleccionar" />
+                            </div>
+
+                            <div class="flex flex-col gap-2">
+                                <label class="font-medium">Estado</label>
+                                <p-select formControlName="status" [options]="staffStatusOptions" optionLabel="label"
+                                    optionValue="value" placeholder="Seleccionar" />
+                            </div>
+
+                            <div class="flex flex-col gap-2">
+                                <label class="font-medium">Cargo / Posición</label>
+                                <input pInputText formControlName="position"
+                                    placeholder="Ej: Profesor de Matemáticas" />
+                            </div>
+
+                            <div class="flex flex-col gap-2">
+                                <label class="font-medium">Departamento / Área</label>
+                                <input pInputText formControlName="department" placeholder="Ej: Ciencias Exactas" />
+                            </div>
+
+                            <div class="flex flex-col gap-2">
+                                <label class="font-medium">Especialización</label>
+                                <input pInputText formControlName="specialization"
+                                    placeholder="Ej: Matemáticas, Física" />
+                            </div>
+
+                            <div class="flex flex-col gap-2">
+                                <label class="font-medium">Sucursal</label>
+                                <p-select formControlName="idBranch" [options]="branches()" optionLabel="name"
+                                    optionValue="idBranch" placeholder="Seleccionar sucursal" />
+                            </div>
+
+                            <div class="flex flex-col gap-2">
+                                <label class="font-medium">Salario</label>
+                                <p-inputnumber formControlName="salary" mode="currency" currency="PYG" locale="es-PY"
+                                    placeholder="0" />
+                            </div>
+
+                            <div class="flex flex-col gap-2">
+                                <label class="font-medium">Fecha de Desvinculación</label>
+                                <p-datepicker formControlName="terminationDate" dateFormat="dd/mm/yy" [showIcon]="true"
+                                    placeholder="Solo si aplica" />
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between mt-6">
+                            <p-button label="Anterior" icon="pi pi-arrow-left" severity="secondary"
+                                (onClick)="activateCallback(0)" />
+                            <p-button [label]="isEditMode() ? 'Actualizar' : 'Guardar'" icon="pi pi-save" type="submit"
+                                [loading]="loading()" />
+                        </div>
+                    </ng-template>
+                </p-step-panel>
+            </p-step-panels>
+        </p-stepper>
+    </form>
+    }
+</div>

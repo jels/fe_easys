@@ -1,0 +1,265 @@
+// src/app/shared/components/staff/staff-detail-dialog/staff-detail-dialog.component.scss
+
+// ── Header ────────────────────────────────────────────────────────────────────
+.dialog-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.dialog-header-skeleton {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+}
+
+.staff-avatar-lg {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    span {
+        font-size: 1rem;
+        font-weight: 700;
+        color: white;
+        letter-spacing: 0.05em;
+    }
+    &[data-type='TEACHER'] {
+        background: linear-gradient(135deg, #60a5fa, #2563eb);
+    }
+    &[data-type='DIRECTOR'] {
+        background: linear-gradient(135deg, #a855f7, #7c3aed);
+    }
+    &[data-type='ADMINISTRATIVE'] {
+        background: linear-gradient(135deg, #34d399, #059669);
+    }
+    &[data-type='SUPPORT'] {
+        background: linear-gradient(135deg, #94a3b8, #475569);
+    }
+}
+
+.dialog-header-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.dialog-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--surface-900);
+    margin: 0 0 0.3rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dialog-header-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.employee-chip {
+    font-family: 'Courier New', monospace;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    background: var(--primary-50, rgba(59, 130, 246, 0.08));
+    padding: 0.1rem 0.4rem;
+    border-radius: 0.25rem;
+}
+
+.position-chip {
+    font-size: 0.75rem;
+    color: var(--text-color-secondary);
+    background: var(--surface-100);
+    padding: 0.1rem 0.5rem;
+    border-radius: 0.4rem;
+}
+
+// ── Detail Grid ───────────────────────────────────────────────────────────────
+.detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1.25rem 1.5rem;
+    padding-top: 1rem;
+}
+
+.detail-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    &.span-2 {
+        grid-column: span 2;
+    }
+    &.span-3 {
+        grid-column: span 3;
+    }
+}
+
+.field-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-color-secondary);
+}
+
+.field-value {
+    font-size: 0.9rem;
+    color: var(--text-color);
+    &.mono {
+        font-family: 'Courier New', monospace;
+    }
+    &.salary {
+        font-weight: 700;
+        color: var(--green-600, #16a34a);
+        font-size: 1rem;
+    }
+}
+
+.contract-notes {
+    font-style: italic;
+    color: var(--text-color-secondary) !important;
+    font-size: 0.85rem !important;
+}
+
+.mono {
+    font-family: 'Courier New', monospace;
+}
+.text-muted {
+    color: var(--text-color-secondary);
+    font-size: 0.8rem;
+}
+
+// ── Attendance Summary ────────────────────────────────────────────────────────
+.attendance-summary {
+    display: flex;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    background: var(--surface-50, #f8fafc);
+    border-radius: 0.5rem;
+    margin-top: 0.75rem;
+    border: 1px solid var(--surface-200);
+    flex-wrap: wrap;
+}
+
+.att-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.1rem;
+    min-width: 70px;
+    &.warn .att-value {
+        color: var(--orange-500, #f97316);
+    }
+    &.danger .att-value {
+        color: var(--red-500, #ef4444);
+    }
+    &.success .att-value {
+        color: var(--green-600, #16a34a);
+    }
+}
+
+.att-value {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--surface-900);
+    line-height: 1;
+}
+
+.att-label {
+    font-size: 0.72rem;
+    color: var(--text-color-secondary);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+// ── Sections / Subjects ───────────────────────────────────────────────────────
+.section-block {
+}
+
+.section-block-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-color-secondary);
+    margin-bottom: 0.75rem;
+    i {
+        color: var(--primary-color);
+    }
+}
+
+.sections-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.75rem;
+}
+
+.section-card {
+    padding: 0.85rem;
+    border: 1px solid var(--surface-200);
+    border-radius: 0.6rem;
+    background: var(--surface-50);
+    transition:
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
+    &:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07);
+        border-color: var(--primary-200, #bfdbfe);
+    }
+}
+
+.section-card-name {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--primary-color);
+    margin-bottom: 0.2rem;
+}
+
+.section-card-sub {
+    font-size: 0.76rem;
+    color: var(--text-color-secondary);
+}
+
+// ── Responsive ────────────────────────────────────────────────────────────────
+@media (max-width: 768px) {
+    .detail-grid {
+        grid-template-columns: 1fr 1fr;
+        .span-2,
+        .span-3 {
+            grid-column: span 2;
+        }
+    }
+    .attendance-summary {
+        gap: 0.75rem;
+    }
+    .sections-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .detail-grid {
+        grid-template-columns: 1fr;
+        .span-2,
+        .span-3 {
+            grid-column: span 1;
+        }
+    }
+    .sections-grid {
+        grid-template-columns: 1fr;
+    }
+}

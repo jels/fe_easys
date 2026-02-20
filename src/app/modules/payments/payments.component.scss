@@ -1,0 +1,520 @@
+// src/app/modules/payments/payments.component.scss
+
+:host {
+    display: block;
+}
+
+.payments-page {
+    animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+// ── Page Header ───────────────────────────────────────────────────────────────
+.page-header {
+    margin-bottom: 1.5rem;
+}
+
+.page-header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.page-title-section {
+    flex: 1;
+}
+
+.page-title {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: var(--surface-900);
+    margin: 0 0 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    i {
+        color: var(--primary-color);
+    }
+}
+
+.page-subtitle {
+    color: var(--text-color-secondary);
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+// ── Stats Grid ────────────────────────────────────────────────────────────────
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-card {
+    background: var(--surface-card);
+    border-radius: 0.75rem;
+    padding: 1.1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: var(--card-shadow);
+    border-left: 4px solid transparent;
+    transition: transform 0.2s ease;
+    &:hover {
+        transform: translateY(-2px);
+    }
+
+    &.stat-month {
+        border-left-color: var(--green-500, #22c55e);
+    }
+    &.stat-year {
+        border-left-color: var(--blue-500, #3b82f6);
+    }
+    &.stat-pending {
+        border-left-color: var(--orange-400, #fb923c);
+    }
+    &.stat-overdue {
+        border-left-color: var(--red-500, #ef4444);
+    }
+}
+
+.stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 0.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    i {
+        font-size: 1.2rem;
+    }
+    .stat-month & {
+        background: rgba(34, 197, 94, 0.12);
+        i {
+            color: #16a34a;
+        }
+    }
+    .stat-year & {
+        background: rgba(59, 130, 246, 0.12);
+        i {
+            color: #2563eb;
+        }
+    }
+    .stat-pending & {
+        background: rgba(251, 146, 60, 0.12);
+        i {
+            color: #ea580c;
+        }
+    }
+    .stat-overdue & {
+        background: rgba(239, 68, 68, 0.12);
+        i {
+            color: #dc2626;
+        }
+    }
+}
+
+.stat-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.05rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.stat-value {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--surface-900);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: var(--text-color-secondary);
+    font-weight: 500;
+}
+.stat-sub {
+    font-size: 0.72rem;
+    color: var(--text-color-secondary);
+}
+
+// ── Tabs Card ─────────────────────────────────────────────────────────────────
+.tabs-card {
+    background: var(--surface-card);
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    box-shadow: var(--card-shadow);
+}
+
+.tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    margin-left: 5px;
+    background: var(--primary-color);
+    color: white;
+    &.tab-badge-blue {
+        background: var(--blue-500, #3b82f6);
+    }
+    &.tab-badge-red {
+        background: var(--red-500, #ef4444);
+    }
+}
+
+// ── Tab Filters ───────────────────────────────────────────────────────────────
+.tab-filters {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+    padding: 0.75rem 0;
+}
+
+.filter-search {
+    flex: 1;
+    min-width: 240px;
+}
+
+.tab-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding: 0.75rem 0;
+    gap: 1rem;
+}
+
+.toolbar-left,
+.toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.inst-filter-group {
+    display: flex;
+    gap: 0.4rem;
+}
+
+// ── Table Cells ───────────────────────────────────────────────────────────────
+.receipt-code {
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    background: var(--primary-50, rgba(59, 130, 246, 0.08));
+    padding: 0.15rem 0.4rem;
+    border-radius: 0.25rem;
+    white-space: nowrap;
+}
+
+.person-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+.person-name {
+    font-weight: 600;
+    color: var(--surface-900);
+    font-size: 0.88rem;
+}
+.person-sub {
+    font-size: 0.75rem;
+    color: var(--text-color-secondary);
+}
+.mono {
+    font-family: 'Courier New', monospace;
+}
+
+.amount-value {
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    color: var(--surface-900);
+    white-space: nowrap;
+}
+
+.amount-danger {
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    color: var(--red-600, #dc2626);
+    white-space: nowrap;
+}
+
+.text-danger {
+    color: var(--red-500, #ef4444);
+}
+
+.method-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    i {
+        color: var(--text-color-secondary);
+    }
+}
+
+.installment-num {
+    font-family: 'Courier New', monospace;
+    font-size: 0.82rem;
+    color: var(--text-color-secondary);
+    background: var(--surface-100);
+    padding: 0.1rem 0.35rem;
+    border-radius: 0.25rem;
+}
+
+.overdue-days {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--red-600, #dc2626);
+    background: rgba(239, 68, 68, 0.08);
+    padding: 0.15rem 0.5rem;
+    border-radius: 0.35rem;
+}
+
+.obs-text {
+    font-size: 0.8rem;
+    color: var(--text-color-secondary);
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+}
+
+// ── Row States ────────────────────────────────────────────────────────────────
+::ng-deep {
+    .row-cancelled td {
+        opacity: 0.5;
+        text-decoration: line-through;
+    }
+    .row-overdue td {
+        background: rgba(239, 68, 68, 0.03) !important;
+    }
+}
+
+// ── Overdue Summary Bar ───────────────────────────────────────────────────────
+.overdue-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: rgba(239, 68, 68, 0.06);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.overdue-total {
+    font-size: 0.9rem;
+    color: var(--surface-700);
+    strong {
+        color: var(--red-600, #dc2626);
+        font-size: 1.05rem;
+        margin-left: 0.25rem;
+    }
+}
+
+.overdue-count {
+    font-size: 0.8rem;
+    color: var(--red-500, #ef4444);
+    font-weight: 600;
+    background: rgba(239, 68, 68, 0.1);
+    padding: 0.2rem 0.6rem;
+    border-radius: 0.35rem;
+}
+
+// ── Financial Summary (Tab 5) ─────────────────────────────────────────────────
+.financial-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    padding: 1rem 0;
+}
+
+.summary-section {
+}
+
+.summary-section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-color-secondary);
+    margin-bottom: 1rem;
+    i {
+        color: var(--primary-color);
+    }
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+}
+
+.summary-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 1rem 1.25rem;
+    background: var(--surface-50, #f8fafc);
+    border-radius: 0.65rem;
+    border: 1px solid var(--surface-200);
+}
+
+.si-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-color-secondary);
+}
+.si-value {
+    font-size: 1.3rem;
+    font-weight: 800;
+    white-space: nowrap;
+    &.success {
+        color: var(--green-600, #16a34a);
+    }
+    &.primary {
+        color: var(--primary-color);
+    }
+    &.info {
+        color: var(--blue-600, #2563eb);
+    }
+    &.danger {
+        color: var(--red-600, #dc2626);
+    }
+}
+.si-sub {
+    font-size: 0.75rem;
+    color: var(--text-color-secondary);
+}
+
+// ── Concept Summary List ──────────────────────────────────────────────────────
+.concepts-summary-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.concept-summary-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.65rem 1rem;
+    background: var(--surface-50);
+    border-radius: 0.5rem;
+    border: 1px solid var(--surface-200);
+}
+
+.concept-summary-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.concept-summary-name {
+    font-weight: 600;
+    font-size: 0.88rem;
+}
+.concept-summary-amount {
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+// ── Empty Tab ─────────────────────────────────────────────────────────────────
+.empty-tab {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-color-secondary);
+    i {
+        font-size: 2.5rem;
+        display: block;
+        margin-bottom: 0.75rem;
+        color: var(--surface-300);
+    }
+    p {
+        margin: 0 0 1rem;
+        font-size: 0.9rem;
+    }
+    &.success-empty {
+        i {
+            color: var(--green-400, #4ade80);
+        }
+        p {
+            color: var(--green-700, #15803d);
+            font-weight: 500;
+        }
+    }
+}
+
+// ── Responsive ────────────────────────────────────────────────────────────────
+@media (max-width: 1024px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+@media (max-width: 768px) {
+    .page-header-content {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .header-actions {
+        justify-content: flex-end;
+    }
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    .tab-filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .tab-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .toolbar-right {
+        justify-content: flex-end;
+    }
+}
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}

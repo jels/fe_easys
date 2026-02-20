@@ -1,0 +1,280 @@
+// src/app/modules/students/students.component.scss
+
+:host {
+    display: block;
+}
+
+// ── Page Header ──────────────────────────────────────────────────────────────
+.students-page {
+    animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.page-header {
+    margin-bottom: 1.5rem;
+}
+
+.page-header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.page-title-section {
+    flex: 1;
+}
+
+.page-title {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: var(--surface-900);
+    margin: 0 0 0.25rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    i {
+        color: var(--primary-color);
+    }
+}
+
+.page-subtitle {
+    color: var(--text-color-secondary);
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+// ── Filters Card ─────────────────────────────────────────────────────────────
+.filters-card {
+    background: var(--surface-card);
+    border-radius: 0.75rem;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.25rem;
+    box-shadow: var(--card-shadow);
+}
+
+.filters-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.filters-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--surface-900);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    i {
+        color: var(--text-color-secondary);
+    }
+}
+
+.filters-content {
+    display: grid;
+    grid-template-columns: 2fr 1.2fr 1.2fr auto;
+    gap: 1rem;
+    align-items: end;
+}
+
+.filter-item {
+    display: flex;
+    flex-direction: column;
+    &.filter-search {
+        grid-column: span 1;
+    }
+}
+
+// ── Actions Bar ───────────────────────────────────────────────────────────────
+.actions-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding: 0 0.25rem;
+}
+
+.actions-left,
+.actions-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.results-count {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text-color-secondary);
+    font-size: 0.9rem;
+    font-weight: 500;
+    i {
+        color: var(--primary-color);
+    }
+}
+
+// ── Table Card ────────────────────────────────────────────────────────────────
+.table-card {
+    background: var(--surface-card);
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    box-shadow: var(--card-shadow);
+}
+
+// ── Student Cells ─────────────────────────────────────────────────────────────
+.student-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    &:hover {
+        transform: scale(1.08);
+    }
+}
+
+.avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    background: var(--primary-100, #eff6ff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    i {
+        font-size: 1.25rem;
+        color: var(--primary-color);
+    }
+}
+
+.student-code {
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    color: var(--primary-color);
+    font-size: 0.8rem;
+    padding: 0.2rem 0.5rem;
+    background: var(--primary-50, rgba(59, 130, 246, 0.08));
+    border-radius: 0.25rem;
+    white-space: nowrap;
+}
+
+.student-name-cell {
+    cursor: pointer;
+    &:hover .student-name {
+        color: var(--primary-color);
+    }
+}
+
+.student-name {
+    font-weight: 600;
+    color: var(--surface-900);
+    font-size: 0.9rem;
+    transition: color 0.2s ease;
+}
+
+.student-sub {
+    font-size: 0.78rem;
+    color: var(--text-color-secondary);
+    margin-top: 0.15rem;
+}
+
+.grade-badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    background: rgba(99, 102, 241, 0.1);
+    color: #6366f1;
+    border-radius: 0.4rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.student-email {
+    font-size: 0.8rem;
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: color 0.2s ease;
+    &:hover {
+        color: var(--primary-700, #1d4ed8);
+        text-decoration: underline;
+    }
+}
+
+// ── Action Buttons ────────────────────────────────────────────────────────────
+.action-buttons {
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+    justify-content: center;
+}
+
+// ── Empty State ───────────────────────────────────────────────────────────────
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    i {
+        font-size: 3.5rem;
+        color: var(--surface-300);
+        margin-bottom: 1rem;
+        display: block;
+    }
+    h3 {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: var(--surface-700);
+        margin: 0 0 0.4rem;
+    }
+    p {
+        color: var(--text-color-secondary);
+        margin: 0 0 1.25rem;
+    }
+}
+
+// ── Responsive ────────────────────────────────────────────────────────────────
+@media (max-width: 1024px) {
+    .filters-content {
+        grid-template-columns: 1fr 1fr;
+        .filter-search {
+            grid-column: span 2;
+        }
+    }
+}
+
+@media (max-width: 768px) {
+    .page-header-content {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .page-title {
+        font-size: 1.375rem;
+    }
+    .filters-content {
+        grid-template-columns: 1fr;
+        .filter-search {
+            grid-column: span 1;
+        }
+    }
+    .actions-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+    .actions-left,
+    .actions-right {
+        justify-content: center;
+    }
+}

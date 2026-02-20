@@ -1,0 +1,499 @@
+<!-- src/app/modules/settings/settings.component.html -->
+<div class="settings-page">
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-header-content">
+            <div class="page-title-section">
+                <h1 class="page-title"><i class="pi pi-cog"></i> Configuraciones</h1>
+                <p class="page-subtitle">Empresa, sucursales, año lectivo y parámetros del sistema</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    @if (stats()) {
+    <div class="stats-grid">
+        <div class="stat-card" [class.demo-active]="stats().demoMode">
+            <div class="stat-icon"><i class="pi pi-database"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ stats().demoMode ? 'Demo' : 'Producción' }}</span>
+                <span class="stat-label">Modo del sistema</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="pi pi-building"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ stats().totalBranches }}</span>
+                <span class="stat-label">Sucursales activas</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="pi pi-calendar"></i></div>
+            <div class="stat-info">
+                <span class="stat-value year-name">{{ stats().activeYear }}</span>
+                <span class="stat-label">Año lectivo activo</span>
+                <span class="stat-sub">{{ stats().activePeriod }}</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="pi pi-sliders-h"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ stats().totalParams }}</span>
+                <span class="stat-label">Parámetros configurables</span>
+            </div>
+        </div>
+    </div>
+    }
+
+    <!-- Tabs -->
+    <div class="tabs-card">
+        <p-tabs [value]="activeTab()" (valueChange)="activeTab.set($event?.toString() ?? '0')">
+            <p-tablist>
+                <p-tab value="0"><i class="pi pi-building mr-1"></i>Empresa</p-tab>
+                <p-tab value="1"><i class="pi pi-map-marker mr-1"></i>Sucursales</p-tab>
+                <p-tab value="2"><i class="pi pi-calendar mr-1"></i>Año Lectivo</p-tab>
+                <p-tab value="3"><i class="pi pi-sliders-h mr-1"></i>Parámetros</p-tab>
+            </p-tablist>
+
+            <p-tabpanels>
+
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <!-- TAB 0 — EMPRESA                                           -->
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <p-tabpanel value="0">
+                    @if (loadingCompany()) {
+                    <p-skeleton height="300px" />
+                    } @else if (company(); as c) {
+
+                    @if (!editingCompany()) {
+                    <!-- Vista de solo lectura -->
+                    <div class="company-view">
+                        <div class="company-view-header">
+                            <div class="company-avatar">{{ c.tradeName.charAt(0) }}</div>
+                            <div>
+                                <h2 class="company-name">{{ c.name }}</h2>
+                                <span class="company-trade">{{ c.tradeName }}</span>
+                            </div>
+                            <button pButton label="Editar" icon="pi pi-pencil" severity="secondary" [outlined]="true"
+                                (click)="startEditCompany()"></button>
+                        </div>
+                        <p-divider />
+                        <div class="company-info-grid">
+                            <div class="company-info-item">
+                                <span class="info-label"><i class="pi pi-id-card"></i> RUC</span>
+                                <span class="info-value mono">{{ c.ruc }}</span>
+                            </div>
+                            <div class="company-info-item">
+                                <span class="info-label"><i class="pi pi-envelope"></i> Email</span>
+                                <span class="info-value">{{ c.email }}</span>
+                            </div>
+                            <div class="company-info-item">
+                                <span class="info-label"><i class="pi pi-phone"></i> Teléfono</span>
+                                <span class="info-value">{{ c.phone }}</span>
+                            </div>
+                            <div class="company-info-item col-span-2">
+                                <span class="info-label"><i class="pi pi-map-marker"></i> Dirección</span>
+                                <span class="info-value">{{ c.address }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    } @else {
+                    <!-- Formulario de edición -->
+                    <form [formGroup]="companyForm" class="company-form">
+                        <div class="form-section-title">Datos de la institución</div>
+                        <div class="form-row">
+                            <div class="form-field form-field-2x">
+                                <label>Razón social <span class="req">*</span></label>
+                                <input pInputText formControlName="name" />
+                                @if (isFieldInvalid(companyForm, 'name')) { <small class="error">Requerido</small> }
+                            </div>
+                            <div class="form-field">
+                                <label>Nombre comercial <span class="req">*</span></label>
+                                <input pInputText formControlName="tradeName" />
+                                @if (isFieldInvalid(companyForm, 'tradeName')) { <small class="error">Requerido</small>
+                                }
+                            </div>
+                            <div class="form-field">
+                                <label>RUC <span class="req">*</span></label>
+                                <input pInputText formControlName="ruc" placeholder="XXXXXXXX-X" />
+                                @if (isFieldInvalid(companyForm, 'ruc')) { <small class="error">Requerido</small> }
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label>Email <span class="req">*</span></label>
+                                <input pInputText formControlName="email" type="email" />
+                                @if (isFieldInvalid(companyForm, 'email')) { <small class="error">Email inválido</small>
+                                }
+                            </div>
+                            <div class="form-field">
+                                <label>Teléfono <span class="req">*</span></label>
+                                <input pInputText formControlName="phone" />
+                                @if (isFieldInvalid(companyForm, 'phone')) { <small class="error">Requerido</small> }
+                            </div>
+                            <div class="form-field form-field-2x">
+                                <label>Dirección <span class="req">*</span></label>
+                                <input pInputText formControlName="address" />
+                                @if (isFieldInvalid(companyForm, 'address')) { <small class="error">Requerido</small> }
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button pButton label="Cancelar" severity="secondary" [outlined]="true"
+                                (click)="cancelEditCompany()"></button>
+                            <button pButton label="Guardar cambios" icon="pi pi-check" [loading]="savingCompany()"
+                                (click)="saveCompany()"></button>
+                        </div>
+                    </form>
+                    }
+                    }
+                </p-tabpanel>
+
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <!-- TAB 1 — SUCURSALES                                        -->
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <p-tabpanel value="1">
+                    <div class="tab-toolbar">
+                        <span class="tab-section-title">Sucursales de la institución</span>
+                        <button pButton label="Nueva sucursal" icon="pi pi-plus" (click)="openNewBranch()"></button>
+                    </div>
+
+                    @if (loadingBranches()) {
+                    <div class="flex flex-col gap-2">
+                        @for (i of [1,2]; track i) { <p-skeleton height="4rem" /> }
+                    </div>
+                    } @else {
+                    <div class="branches-grid">
+                        @for (branch of branches(); track branch.idBranch) {
+                        <div class="branch-card" [class.branch-main]="branch.isMain">
+                            <div class="branch-card-header">
+                                <div class="branch-icon">
+                                    <i class="pi pi-building"></i>
+                                </div>
+                                <div class="branch-info">
+                                    <span class="branch-name">{{ branch.name }}</span>
+                                    <span class="branch-code mono">{{ branch.code }}</span>
+                                </div>
+                                @if (branch.isMain) {
+                                <p-tag value="Principal" severity="success" styleClass="text-xs" />
+                                }
+                            </div>
+                            <div class="branch-details">
+                                <span><i class="pi pi-map-marker"></i> {{ branch.address }}</span>
+                                <span><i class="pi pi-phone"></i> {{ branch.phone }}</span>
+                            </div>
+                            <div class="branch-actions">
+                                <button pButton icon="pi pi-pencil" severity="secondary" [text]="true" pTooltip="Editar"
+                                    (click)="openEditBranch(branch)"></button>
+                                @if (!branch.isMain) {
+                                <button pButton icon="pi pi-trash" severity="danger" [text]="true" pTooltip="Eliminar"
+                                    (click)="confirmDeleteBranch(branch)"></button>
+                                }
+                            </div>
+                        </div>
+                        }
+                    </div>
+                    }
+                </p-tabpanel>
+
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <!-- TAB 2 — AÑO LECTIVO                                       -->
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <p-tabpanel value="2">
+                    <div class="year-layout">
+
+                        <!-- Panel izquierdo: Años lectivos -->
+                        <div class="year-list-panel">
+                            <div class="panel-header">
+                                <span class="tab-section-title">Años lectivos</span>
+                                <button pButton icon="pi pi-plus" severity="secondary" [text]="true"
+                                    pTooltip="Nuevo año lectivo" (click)="openNewYear()"></button>
+                            </div>
+                            @if (loadingYears()) {
+                            <div class="flex flex-col gap-2">
+                                @for (i of [1,2]; track i) { <p-skeleton height="3rem" /> }
+                            </div>
+                            } @else {
+                            @for (year of schoolYears(); track year.idSchoolYear) {
+                            <div class="year-item" [class.selected]="selectedYear()?.idSchoolYear === year.idSchoolYear"
+                                (click)="selectYear(year)">
+                                <div class="year-item-left">
+                                    <span class="year-item-name">{{ year.name }}</span>
+                                    <span class="year-item-dates">{{ year.startDate }} → {{ year.endDate }}</span>
+                                </div>
+                                <div class="year-item-right">
+                                    @if (year.isActive) {
+                                    <p-tag value="Activo" severity="success" styleClass="text-xs" />
+                                    } @else {
+                                    <p-tag value="Cerrado" severity="secondary" styleClass="text-xs" />
+                                    }
+                                    <button pButton [icon]="year.isActive ? 'pi pi-lock' : 'pi pi-unlock'"
+                                        [severity]="year.isActive ? 'warn' : 'success'" [text]="true"
+                                        [pTooltip]="year.isActive ? 'Cerrar año' : 'Activar año'"
+                                        (click)="toggleYear(year); $event.stopPropagation()"></button>
+                                </div>
+                            </div>
+                            }
+                            }
+                        </div>
+
+                        <!-- Panel derecho: Períodos del año seleccionado -->
+                        <div class="period-panel">
+                            @if (!selectedYear()) {
+                            <div class="empty-tab">
+                                <i class="pi pi-arrow-left"></i>
+                                <p>Seleccioná un año lectivo para ver sus períodos</p>
+                            </div>
+                            } @else {
+                            <div class="panel-header">
+                                <span class="tab-section-title">Períodos — {{ selectedYear()!.name }}</span>
+                                @if (selectedYear()!.isActive) {
+                                <button pButton label="Nuevo período" icon="pi pi-plus" severity="secondary"
+                                    [outlined]="true" size="small" (click)="openNewPeriod()"></button>
+                                }
+                            </div>
+                            @if (loadingPeriods()) {
+                            <p-skeleton height="200px" />
+                            } @else {
+                            <div class="periods-timeline">
+                                @for (period of periods(); track period.idSchoolPeriod) {
+                                <div class="period-item" [class.period-active]="period.isActive">
+                                    <div class="period-num">{{ period.periodNumber }}°</div>
+                                    <div class="period-info">
+                                        <span class="period-name">{{ period.name }}</span>
+                                        <span class="period-dates mono">{{ period.startDate }} → {{ period.endDate
+                                            }}</span>
+                                    </div>
+                                    <div class="period-actions">
+                                        @if (period.isActive) {
+                                        <p-tag value="Activo" severity="success" styleClass="text-xs" />
+                                        }
+                                        @if (selectedYear()!.isActive) {
+                                        <button pButton [icon]="period.isActive ? 'pi pi-lock' : 'pi pi-unlock'"
+                                            [severity]="period.isActive ? 'warn' : 'success'" [text]="true"
+                                            [pTooltip]="period.isActive ? 'Cerrar período' : 'Activar período'"
+                                            (click)="togglePeriod(period)"></button>
+                                        }
+                                    </div>
+                                </div>
+                                }
+                                @if (periods().length === 0) {
+                                <div class="empty-tab">
+                                    <i class="pi pi-calendar-times"></i>
+                                    <p>Sin períodos configurados</p>
+                                </div>
+                                }
+                            </div>
+                            }
+                            }
+                        </div>
+                    </div>
+                </p-tabpanel>
+
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <!-- TAB 3 — PARÁMETROS                                        -->
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <p-tabpanel value="3">
+                    <!-- Categorías -->
+                    <div class="param-categories">
+                        @for (cat of paramCategories; track cat.key) {
+                        <button class="param-cat-btn" [class.active]="activeParamCategory() === cat.key"
+                            (click)="activeParamCategory.set(cat.key)">
+                            <i class="pi" [class]="cat.icon"></i>
+                            {{ cat.label }}
+                        </button>
+                        }
+                    </div>
+
+                    @if (loadingParams()) {
+                    <div class="flex flex-col gap-2 mt-3">
+                        @for (i of [1,2,3]; track i) { <p-skeleton height="3.5rem" /> }
+                    </div>
+                    } @else {
+                    <div class="params-list">
+                        @for (param of filteredParams; track param.idParam) {
+                        <div class="param-row" [class.param-editing]="editingParamId() === param.idParam">
+                            <div class="param-info">
+                                <span class="param-label">{{ param.label }}</span>
+                                @if (param.description) {
+                                <span class="param-desc">{{ param.description }}</span>
+                                }
+                                <span class="param-key mono">{{ param.paramKey }}</span>
+                            </div>
+                            <div class="param-value-area">
+                                @if (editingParamId() === param.idParam) {
+                                <!-- Modo edición según tipo -->
+                                @if (param.paramType === 'BOOLEAN') {
+                                <p-toggleswitch [ngModel]="getParamTempValue(param.idParam) === 'true'"
+                                    (ngModelChange)="setParamTempValue(param.idParam, $event ? 'true' : 'false')" />
+                                } @else if (param.paramType === 'SELECT') {
+                                <p-select [options]="getParamOptions(param)"
+                                    [ngModel]="getParamTempValue(param.idParam)"
+                                    (ngModelChange)="setParamTempValue(param.idParam, $event)" optionLabel="label"
+                                    optionValue="value" styleClass="param-select" />
+                                } @else if (param.paramType === 'NUMBER') {
+                                <input pInputText type="number" [ngModel]="getParamTempValue(param.idParam)"
+                                    (ngModelChange)="setParamTempValue(param.idParam, $event)" class="param-input" />
+                                } @else {
+                                <input pInputText type="text" [ngModel]="getParamTempValue(param.idParam)"
+                                    (ngModelChange)="setParamTempValue(param.idParam, $event)" class="param-input" />
+                                }
+                                <div class="param-edit-actions">
+                                    <button pButton icon="pi pi-check" severity="success" [text]="true"
+                                        pTooltip="Guardar" (click)="saveParam(param)"></button>
+                                    <button pButton icon="pi pi-times" severity="secondary" [text]="true"
+                                        pTooltip="Cancelar" (click)="cancelEditParam()"></button>
+                                </div>
+                                } @else {
+                                <!-- Vista readonly -->
+                                <span class="param-current-value"
+                                    [class.value-bool-true]="param.paramType === 'BOOLEAN' && param.paramValue === 'true'"
+                                    [class.value-bool-false]="param.paramType === 'BOOLEAN' && param.paramValue === 'false'">
+                                    @if (param.paramType === 'BOOLEAN') {
+                                    <i class="pi" [class.pi-check-circle]="param.paramValue === 'true'"
+                                        [class.pi-times-circle]="param.paramValue !== 'true'"></i>
+                                    {{ param.paramValue === 'true' ? 'Habilitado' : 'Deshabilitado' }}
+                                    } @else {
+                                    {{ param.paramValue }}
+                                    }
+                                </span>
+                                @if (param.isEditable) {
+                                <button pButton icon="pi pi-pencil" severity="secondary" [text]="true"
+                                    pTooltip="Editar parámetro" (click)="startEditParam(param)"></button>
+                                } @else {
+                                <span class="param-readonly-badge">
+                                    <i class="pi pi-lock"></i> Solo lectura
+                                </span>
+                                }
+                                }
+                            </div>
+                        </div>
+                        }
+                    </div>
+                    }
+                </p-tabpanel>
+
+            </p-tabpanels>
+        </p-tabs>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- MODAL: SUCURSAL                                                           -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<p-dialog [header]="editingBranch() ? 'Editar Sucursal' : 'Nueva Sucursal'" [(visible)]="showBranchForm" [modal]="true"
+    [draggable]="false" [style]="{ width: '520px' }">
+    <form [formGroup]="branchForm" class="modal-form">
+        <div class="form-row">
+            <div class="form-field form-field-2x">
+                <label>Nombre <span class="req">*</span></label>
+                <input pInputText formControlName="name" placeholder="Ej: Sede Norte" />
+                @if (isFieldInvalid(branchForm, 'name')) { <small class="error">Requerido</small> }
+            </div>
+            <div class="form-field">
+                <label>Código <span class="req">*</span></label>
+                <input pInputText formControlName="code" placeholder="Ej: SN-003" />
+                @if (isFieldInvalid(branchForm, 'code')) { <small class="error">Requerido</small> }
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-field form-field-2x">
+                <label>Dirección <span class="req">*</span></label>
+                <input pInputText formControlName="address" />
+                @if (isFieldInvalid(branchForm, 'address')) { <small class="error">Requerido</small> }
+            </div>
+            <div class="form-field">
+                <label>Teléfono</label>
+                <input pInputText formControlName="phone" />
+            </div>
+        </div>
+        <div class="toggle-row">
+            <label>Sede principal</label>
+            <p-toggleswitch formControlName="isMain" />
+        </div>
+    </form>
+    <ng-template pTemplate="footer">
+        <button pButton label="Cancelar" severity="secondary" [outlined]="true"
+            (click)="showBranchForm.set(false)"></button>
+        <button pButton [label]="editingBranch() ? 'Guardar cambios' : 'Crear sucursal'" icon="pi pi-check"
+            [loading]="savingBranch()" (click)="saveBranch()"></button>
+    </ng-template>
+</p-dialog>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- MODAL: NUEVO AÑO LECTIVO                                                  -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<p-dialog header="Nuevo Año Lectivo" [(visible)]="showYearForm" [modal]="true" [draggable]="false"
+    [style]="{ width: '480px' }">
+    <form [formGroup]="yearForm" class="modal-form">
+        <div class="form-field">
+            <label>Nombre <span class="req">*</span></label>
+            <input pInputText formControlName="name" placeholder="Ej: Año Lectivo 2026" />
+            @if (isFieldInvalid(yearForm, 'name')) { <small class="error">Requerido</small> }
+        </div>
+        <div class="form-row">
+            <div class="form-field">
+                <label>Fecha inicio <span class="req">*</span></label>
+                <p-datepicker formControlName="startDate" dateFormat="yy-mm-dd" placeholder="YYYY-MM-DD"
+                    styleClass="w-full" />
+                @if (isFieldInvalid(yearForm, 'startDate')) { <small class="error">Requerido</small> }
+            </div>
+            <div class="form-field">
+                <label>Fecha fin <span class="req">*</span></label>
+                <p-datepicker formControlName="endDate" dateFormat="yy-mm-dd" placeholder="YYYY-MM-DD"
+                    styleClass="w-full" />
+                @if (isFieldInvalid(yearForm, 'endDate')) { <small class="error">Requerido</small> }
+            </div>
+        </div>
+    </form>
+    <ng-template pTemplate="footer">
+        <button pButton label="Cancelar" severity="secondary" [outlined]="true"
+            (click)="showYearForm.set(false)"></button>
+        <button pButton label="Crear año lectivo" icon="pi pi-check" [loading]="savingYear()"
+            (click)="saveYear()"></button>
+    </ng-template>
+</p-dialog>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- MODAL: NUEVO PERÍODO                                                      -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<p-dialog header="Nuevo Período" [(visible)]="showPeriodForm" [modal]="true" [draggable]="false"
+    [style]="{ width: '480px' }">
+    <form [formGroup]="periodForm" class="modal-form">
+        <div class="form-row">
+            <div class="form-field form-field-2x">
+                <label>Nombre <span class="req">*</span></label>
+                <input pInputText formControlName="name" placeholder="Ej: 1er Bimestre" />
+                @if (isFieldInvalid(periodForm, 'name')) { <small class="error">Requerido</small> }
+            </div>
+            <div class="form-field">
+                <label>N° período <span class="req">*</span></label>
+                <input pInputText type="number" formControlName="periodNumber" />
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-field">
+                <label>Fecha inicio <span class="req">*</span></label>
+                <p-datepicker formControlName="startDate" dateFormat="yy-mm-dd" placeholder="YYYY-MM-DD"
+                    styleClass="w-full" />
+                @if (isFieldInvalid(periodForm, 'startDate')) { <small class="error">Requerido</small> }
+            </div>
+            <div class="form-field">
+                <label>Fecha fin <span class="req">*</span></label>
+                <p-datepicker formControlName="endDate" dateFormat="yy-mm-dd" placeholder="YYYY-MM-DD"
+                    styleClass="w-full" />
+                @if (isFieldInvalid(periodForm, 'endDate')) { <small class="error">Requerido</small> }
+            </div>
+        </div>
+    </form>
+    <ng-template pTemplate="footer">
+        <button pButton label="Cancelar" severity="secondary" [outlined]="true"
+            (click)="showPeriodForm.set(false)"></button>
+        <button pButton label="Crear período" icon="pi pi-check" [loading]="savingPeriod()"
+            (click)="savePeriod()"></button>
+    </ng-template>
+</p-dialog>
+
+<p-confirmDialog />
+<p-toast position="top-right" />

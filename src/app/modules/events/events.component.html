@@ -1,0 +1,606 @@
+<!-- src/app/modules/events/events.component.html -->
+<div class="events-page">
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-header-content">
+            <div class="page-title-section">
+                <h1 class="page-title"><i class="pi pi-calendar"></i> Eventos</h1>
+                <p class="page-subtitle">Gestión de eventos, actividades y participantes del año lectivo</p>
+            </div>
+            <button pButton label="Nuevo Evento" icon="pi pi-plus" (click)="openNewEvent()" class="btn-new"></button>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    @if (stats()) {
+    <div class="stats-grid">
+        <div class="stat-card stat-total">
+            <div class="stat-icon"><i class="pi pi-calendar"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ stats().totalEvents }}</span>
+                <span class="stat-label">Total eventos</span>
+            </div>
+        </div>
+        <div class="stat-card stat-planned">
+            <div class="stat-icon"><i class="pi pi-clock"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ stats().planned }}</span>
+                <span class="stat-label">Planificados</span>
+            </div>
+        </div>
+        <div class="stat-card stat-active">
+            <div class="stat-icon"><i class="pi pi-play"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ stats().active }}</span>
+                <span class="stat-label">En curso</span>
+            </div>
+        </div>
+        <div class="stat-card stat-regs">
+            <div class="stat-icon"><i class="pi pi-users"></i></div>
+            <div class="stat-info">
+                <span class="stat-value">{{ stats().totalRegistrations }}</span>
+                <span class="stat-label">Inscripciones</span>
+            </div>
+        </div>
+    </div>
+    }
+
+    <!-- Tabs -->
+    <div class="tabs-card">
+        <p-tabs [value]="activeTab()" (valueChange)="activeTab.set($event?.toString() ?? '0')">
+            <p-tablist>
+                <p-tab value="0"><i class="pi pi-list mr-1"></i>Lista</p-tab>
+                <p-tab value="1"><i class="pi pi-calendar mr-1"></i>Calendario</p-tab>
+                <p-tab value="2"><i class="pi pi-user-plus mr-1"></i>Inscripciones</p-tab>
+                <p-tab value="3"><i class="pi pi-tags mr-1"></i>Tipos</p-tab>
+            </p-tablist>
+
+            <p-tabpanels>
+
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <!-- TAB 0 — LISTA DE EVENTOS                                  -->
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <p-tabpanel value="0">
+                    <!-- Filtros -->
+                    <div class="filter-bar">
+                        <div class="filter-search">
+                            <i class="pi pi-search"></i>
+                            <input pInputText type="text" placeholder="Buscar evento..." [(ngModel)]="searchEvent"
+                                (input)="onSearch()" />
+                        </div>
+                        <p-select [options]="statusOptions" [(ngModel)]="filterStatus" optionLabel="label"
+                            optionValue="value" placeholder="Estado" (onChange)="onFilter()"
+                            styleClass="filter-select" />
+                        <p-select [options]="typeOptions" [(ngModel)]="filterType" optionLabel="label"
+                            optionValue="value" placeholder="Tipo" (onChange)="onFilter()" styleClass="filter-select" />
+                        <p-select [options]="scopeOptions" [(ngModel)]="filterScope" optionLabel="label"
+                            optionValue="value" placeholder="Alcance" (onChange)="onFilter()"
+                            styleClass="filter-select" />
+                        @if (hasFilters) {
+                        <button pButton icon="pi pi-times" severity="secondary" pTooltip="Limpiar filtros"
+                            (click)="clearFilters()"></button>
+                        }
+                    </div>
+
+                    <!-- Tabla -->
+                    @if (loadingEvents()) {
+                    <div class="flex flex-col gap-2">
+                        @for (i of [1,2,3,4]; track i) { <p-skeleton height="3.5rem" /> }
+                    </div>
+                    } @else {
+                    <p-table [value]="events()" styleClass="p-datatable-sm events-table" responsiveLayout="scroll"
+                        [rowHover]="true">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th>Evento</th>
+                                <th>Fecha</th>
+                                <th>Tipo</th>
+                                <th>Alcance</th>
+                                <th class="text-center">Inscriptos</th>
+                                <th class="text-center">Estado</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-event>
+                            <tr>
+                                <td>
+                                    <div class="event-name-cell">
+                                        <span class="event-type-dot"
+                                            [style.background]="getTypeColor(event.idEventType)"></span>
+                                        <div>
+                                            <span class="event-name">{{ event.name }}</span>
+                                            @if (event.location) {
+                                            <span class="event-location">
+                                                <i class="pi pi-map-marker"></i> {{ event.location }}
+                                            </span>
+                                            }
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="date-cell">
+                                        <span class="date-main">{{ event.eventDate }}</span>
+                                        @if (event.eventTime) {
+                                        <span class="date-time">{{ event.eventTime }}
+                                            @if (event.endTime) { – {{ event.endTime }} }
+                                        </span>
+                                        }
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="type-badge" [style.background]="getTypeColor(event.idEventType) + '1a'"
+                                        [style.color]="getTypeColor(event.idEventType)">
+                                        <i class="pi" [class]="getTypeIcon(event.idEventType)"></i>
+                                        {{ event.eventTypeName }}
+                                    </span>
+                                </td>
+                                <td><span class="scope-badge">{{ getScopeLabel(event.scope) }}</span></td>
+                                <td class="text-center">
+                                    <span class="reg-count">{{ event.registrationsCount ?? 0 }}</span>
+                                    @if (event.maxParticipants) {
+                                    <span class="reg-max"> / {{ event.maxParticipants }}</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <p-tag [value]="getStatusLabel(event.status)"
+                                        [severity]="getStatusSeverity(event.status)" />
+                                </td>
+                                <td class="text-center">
+                                    <div class="action-buttons">
+                                        <button pButton icon="pi pi-eye" severity="secondary" [text]="true"
+                                            pTooltip="Ver detalle" (click)="openDetail(event)"></button>
+                                        @if (event.status === 'PLANNED') {
+                                        <button pButton icon="pi pi-play" severity="success" [text]="true"
+                                            pTooltip="Iniciar evento" (click)="changeStatus(event, 'ACTIVE')"></button>
+                                        }
+                                        @if (event.status === 'ACTIVE') {
+                                        <button pButton icon="pi pi-check" severity="info" [text]="true"
+                                            pTooltip="Marcar completado"
+                                            (click)="changeStatus(event, 'COMPLETED')"></button>
+                                        }
+                                        @if (event.status !== 'CANCELLED' && event.status !== 'COMPLETED') {
+                                        <button pButton icon="pi pi-ban" severity="danger" [text]="true"
+                                            pTooltip="Cancelar evento" (click)="cancelEvent(event)"></button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="emptymessage">
+                            <tr>
+                                <td colspan="7">
+                                    <div class="empty-tab">
+                                        <i class="pi pi-calendar-times"></i>
+                                        <p>No se encontraron eventos</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
+                    }
+                </p-tabpanel>
+
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <!-- TAB 1 — CALENDARIO                                        -->
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <p-tabpanel value="1">
+                    <div class="calendar-header">
+                        <button pButton icon="pi pi-chevron-left" severity="secondary" [text]="true"
+                            (click)="prevMonth()"></button>
+                        <h2 class="calendar-title">
+                            {{ MONTHS[calendarMonth() - 1] }} {{ calendarYear() }}
+                        </h2>
+                        <button pButton icon="pi pi-chevron-right" severity="secondary" [text]="true"
+                            (click)="nextMonth()"></button>
+                    </div>
+
+                    @if (loadingCalendar()) {
+                    <p-skeleton height="400px" />
+                    } @else {
+                    <div class="calendar-grid">
+                        <!-- Cabecera días -->
+                        @for (d of DAYS_SHORT; track d) {
+                        <div class="cal-day-header">{{ d }}</div>
+                        }
+                        <!-- Celdas -->
+                        @for (day of getCalendarDays(); track $index) {
+                        <div class="cal-cell" [class.cal-empty]="day === null"
+                            [class.cal-today]="day !== null && isToday(day)">
+                            @if (day !== null) {
+                            <span class="cal-day-num">{{ day }}</span>
+                            @for (ev of getEventsForDay(day); track ev.idEvent) {
+                            <div class="cal-event" [style.background]="getTypeColor(ev.idEventType) + '22'"
+                                [style.border-left-color]="getTypeColor(ev.idEventType)" (click)="openDetail(ev)"
+                                [pTooltip]="ev.name" tooltipPosition="top">
+                                @if (ev.eventTime) {
+                                <span class="cal-event-time">{{ ev.eventTime }}</span>
+                                }
+                                <span class="cal-event-name">{{ ev.name }}</span>
+                            </div>
+                            }
+                            }
+                        </div>
+                        }
+                    </div>
+                    }
+
+                    <!-- Leyenda tipos -->
+                    <div class="calendar-legend">
+                        @for (type of eventTypes(); track type.idEventType) {
+                        <span class="legend-item">
+                            <span class="legend-dot" [style.background]="type.color"></span>
+                            {{ type.name }}
+                        </span>
+                        }
+                    </div>
+                </p-tabpanel>
+
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <!-- TAB 2 — INSCRIPCIONES                                     -->
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <p-tabpanel value="2">
+                    <div class="reg-layout">
+                        <!-- Panel izquierdo: selector de evento -->
+                        <div class="reg-event-panel">
+                            <div class="reg-panel-title">Seleccionar evento</div>
+                            @for (ev of events(); track ev.idEvent) {
+                            <div class="reg-event-item" [class.selected]="selectedEventForReg()?.idEvent === ev.idEvent"
+                                (click)="selectEventForReg(ev)">
+                                <span class="event-type-dot" [style.background]="getTypeColor(ev.idEventType)"></span>
+                                <div class="reg-event-info">
+                                    <span class="reg-event-name">{{ ev.name }}</span>
+                                    <span class="reg-event-date">{{ ev.eventDate }}</span>
+                                </div>
+                                <span class="reg-event-count">{{ ev.registrationsCount ?? 0 }}</span>
+                            </div>
+                            }
+                        </div>
+
+                        <!-- Panel derecho: inscriptos -->
+                        <div class="reg-list-panel">
+                            @if (!selectedEventForReg()) {
+                            <div class="empty-tab">
+                                <i class="pi pi-arrow-left"></i>
+                                <p>Seleccioná un evento para ver las inscripciones</p>
+                            </div>
+                            } @else {
+                            <div class="reg-list-header">
+                                <div>
+                                    <h3 class="reg-list-title">{{ selectedEventForReg()!.name }}</h3>
+                                    <span class="reg-list-sub">
+                                        {{ registrations().length }} inscriptos
+                                        @if (selectedEventForReg()!.maxParticipants) {
+                                        de {{ selectedEventForReg()!.maxParticipants }} máx.
+                                        }
+                                    </span>
+                                </div>
+                                @if (selectedEventForReg()!.status !== 'CANCELLED' && selectedEventForReg()!.status !==
+                                'COMPLETED') {
+                                <button pButton label="Inscribir alumno" icon="pi pi-user-plus" severity="success"
+                                    (click)="openRegDialog()"></button>
+                                }
+                            </div>
+
+                            @if (loadingReg()) {
+                            <div class="flex flex-col gap-2">
+                                @for (i of [1,2,3]; track i) { <p-skeleton height="3rem" /> }
+                            </div>
+                            } @else {
+                            <p-table [value]="registrations()" styleClass="p-datatable-sm" responsiveLayout="scroll">
+                                <ng-template pTemplate="header">
+                                    <tr>
+                                        <th>Alumno</th>
+                                        <th>Grado / Sección</th>
+                                        <th>Fecha inscripción</th>
+                                        <th class="text-center">Estado</th>
+                                        <th class="text-center">Acciones</th>
+                                    </tr>
+                                </ng-template>
+                                <ng-template pTemplate="body" let-reg>
+                                    <tr>
+                                        <td class="font-semibold">{{ reg.studentName }}</td>
+                                        <td>{{ reg.gradeName }} {{ reg.sectionName }}</td>
+                                        <td>{{ reg.registrationDate }}</td>
+                                        <td class="text-center">
+                                            <p-tag [value]="getRegStatusLabel(reg.status)"
+                                                [severity]="getRegStatusSeverity(reg.status)" />
+                                        </td>
+                                        <td class="text-center">
+                                            @if (reg.status !== 'CANCELLED') {
+                                            <button pButton icon="pi pi-times" severity="danger" [text]="true"
+                                                pTooltip="Cancelar inscripción" (click)="cancelReg(reg)"></button>
+                                            }
+                                        </td>
+                                    </tr>
+                                </ng-template>
+                                <ng-template pTemplate="emptymessage">
+                                    <tr>
+                                        <td colspan="5">
+                                            <div class="empty-tab">
+                                                <i class="pi pi-users"></i>
+                                                <p>Sin inscripciones para este evento</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </ng-template>
+                            </p-table>
+                            }
+                            }
+                        </div>
+                    </div>
+                </p-tabpanel>
+
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <!-- TAB 3 — TIPOS DE EVENTO                                   -->
+                <!-- ══════════════════════════════════════════════════════════ -->
+                <p-tabpanel value="3">
+                    <div class="types-grid">
+                        @for (type of eventTypes(); track type.idEventType) {
+                        <div class="type-card">
+                            <div class="type-card-icon" [style.background]="type.color + '1a'"
+                                [style.color]="type.color">
+                                <i class="pi" [class]="type.icon"></i>
+                            </div>
+                            <div class="type-card-info">
+                                <span class="type-card-name">{{ type.name }}</span>
+                                <span class="type-card-desc">{{ type.description }}</span>
+                                <span class="type-card-count">
+                                    {{ events() | eventTypeCount: type.idEventType }} eventos
+                                </span>
+                            </div>
+                            <span class="type-color-dot" [style.background]="type.color"></span>
+                        </div>
+                        }
+                    </div>
+                </p-tabpanel>
+
+            </p-tabpanels>
+        </p-tabs>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- MODAL: DETALLE DEL EVENTO                                                 -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<p-dialog header="Detalle del Evento" [(visible)]="showDetail" [modal]="true" [draggable]="false"
+    styleClass="event-detail-dialog" [style]="{ width: '680px' }" (onHide)="closeDetail()">
+    @if (loadingDetail()) {
+    <p-skeleton height="300px" />
+    } @else if (selectedEvent(); as ev) {
+    <div class="detail-content">
+        <!-- Header del evento -->
+        <div class="detail-event-header" [style.border-left-color]="getTypeColor(ev.idEventType)">
+            <div class="detail-type-badge" [style.background]="getTypeColor(ev.idEventType) + '1a'"
+                [style.color]="getTypeColor(ev.idEventType)">
+                <i class="pi" [class]="getTypeIcon(ev.idEventType)"></i>
+                {{ ev.eventTypeName }}
+            </div>
+            <h2 class="detail-event-name">{{ ev.name }}</h2>
+            @if (ev.description) {
+            <p class="detail-event-desc">{{ ev.description }}</p>
+            }
+        </div>
+
+        <!-- Info grid -->
+        <div class="detail-info-grid">
+            <div class="detail-info-item">
+                <i class="pi pi-calendar"></i>
+                <div>
+                    <span class="detail-label">Fecha</span>
+                    <span class="detail-value">
+                        {{ ev.eventDate }}
+                        @if (ev.endDate && ev.endDate !== ev.eventDate) { → {{ ev.endDate }} }
+                    </span>
+                </div>
+            </div>
+            @if (ev.eventTime) {
+            <div class="detail-info-item">
+                <i class="pi pi-clock"></i>
+                <div>
+                    <span class="detail-label">Horario</span>
+                    <span class="detail-value">
+                        {{ ev.eventTime }}
+                        @if (ev.endTime) { – {{ ev.endTime }} }
+                    </span>
+                </div>
+            </div>
+            }
+            @if (ev.location) {
+            <div class="detail-info-item">
+                <i class="pi pi-map-marker"></i>
+                <div>
+                    <span class="detail-label">Lugar</span>
+                    <span class="detail-value">{{ ev.location }}</span>
+                </div>
+            </div>
+            }
+            <div class="detail-info-item">
+                <i class="pi pi-globe"></i>
+                <div>
+                    <span class="detail-label">Alcance</span>
+                    <span class="detail-value">{{ getScopeLabel(ev.scope) }}</span>
+                </div>
+            </div>
+            @if (ev.maxParticipants) {
+            <div class="detail-info-item">
+                <i class="pi pi-users"></i>
+                <div>
+                    <span class="detail-label">Participantes</span>
+                    <span class="detail-value">
+                        {{ ev.registrationsCount ?? 0 }} / {{ ev.maxParticipants }}
+                    </span>
+                </div>
+            </div>
+            }
+            @if (ev.responsibleStaffName) {
+            <div class="detail-info-item">
+                <i class="pi pi-user"></i>
+                <div>
+                    <span class="detail-label">Responsable</span>
+                    <span class="detail-value">{{ ev.responsibleStaffName }}</span>
+                </div>
+            </div>
+            }
+            <div class="detail-info-item">
+                <i class="pi pi-credit-card"></i>
+                <div>
+                    <span class="detail-label">Pago</span>
+                    <span class="detail-value">
+                        {{ ev.requiresPayment ? 'Requiere pago' : 'Sin costo' }}
+                    </span>
+                </div>
+            </div>
+            @if (ev.registrationDeadline) {
+            <div class="detail-info-item">
+                <i class="pi pi-exclamation-circle"></i>
+                <div>
+                    <span class="detail-label">Límite inscripción</span>
+                    <span class="detail-value">{{ ev.registrationDeadline }}</span>
+                </div>
+            </div>
+            }
+        </div>
+
+        <!-- Estado y transición -->
+        <div class="detail-status-bar">
+            <p-tag [value]="getStatusLabel(ev.status)" [severity]="getStatusSeverity(ev.status)" styleClass="text-sm" />
+            <div class="detail-status-actions">
+                @if (ev.status === 'PLANNED') {
+                <button pButton label="Iniciar evento" icon="pi pi-play" severity="success" size="small"
+                    (click)="changeStatus(ev, 'ACTIVE'); closeDetail()"></button>
+                }
+                @if (ev.status === 'ACTIVE') {
+                <button pButton label="Marcar completado" icon="pi pi-check" severity="info" size="small"
+                    (click)="changeStatus(ev, 'COMPLETED'); closeDetail()"></button>
+                }
+                @if (ev.status !== 'CANCELLED' && ev.status !== 'COMPLETED') {
+                <button pButton label="Cancelar evento" icon="pi pi-ban" severity="danger" [outlined]="true"
+                    size="small" (click)="cancelEvent(ev); closeDetail()"></button>
+                }
+            </div>
+        </div>
+
+        @if (ev.observations) {
+        <div class="detail-obs">
+            <span class="detail-obs-label">Observaciones</span>
+            <p>{{ ev.observations }}</p>
+        </div>
+        }
+    </div>
+    }
+</p-dialog>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- MODAL: NUEVO EVENTO                                                       -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<p-dialog header="Nuevo Evento" [(visible)]="showEventForm" [modal]="true" [draggable]="false"
+    styleClass="event-form-dialog" [style]="{ width: '720px' }">
+    <form [formGroup]="eventForm" class="event-form">
+        <div class="form-row">
+            <div class="form-field form-field-2x">
+                <label>Nombre del evento <span class="req">*</span></label>
+                <input pInputText formControlName="name" placeholder="Ej: Acto del Día del Estudiante" />
+                @if (isFieldInvalid('name')) { <small class="error">Campo requerido</small> }
+            </div>
+            <div class="form-field">
+                <label>Tipo <span class="req">*</span></label>
+                <p-select formControlName="idEventType" [options]="typeFormOptions" optionLabel="label"
+                    optionValue="value" placeholder="Seleccionar tipo" styleClass="w-full" />
+                @if (isFieldInvalid('idEventType')) { <small class="error">Seleccione un tipo</small> }
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-field">
+                <label>Fecha inicio <span class="req">*</span></label>
+                <p-datepicker formControlName="eventDate" dateFormat="yy-mm-dd" placeholder="YYYY-MM-DD"
+                    styleClass="w-full" />
+                @if (isFieldInvalid('eventDate')) { <small class="error">Campo requerido</small> }
+            </div>
+            <div class="form-field">
+                <label>Hora inicio</label>
+                <input pInputText formControlName="eventTime" placeholder="07:00" />
+            </div>
+            <div class="form-field">
+                <label>Fecha fin</label>
+                <p-datepicker formControlName="endDate" dateFormat="yy-mm-dd" placeholder="YYYY-MM-DD"
+                    styleClass="w-full" />
+            </div>
+            <div class="form-field">
+                <label>Hora fin</label>
+                <input pInputText formControlName="endTime" placeholder="13:00" />
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-field">
+                <label>Lugar</label>
+                <input pInputText formControlName="location" placeholder="Ej: Patio Central" />
+            </div>
+            <div class="form-field">
+                <label>Alcance <span class="req">*</span></label>
+                <p-select formControlName="scope"
+                    [options]="[{label:'General',value:'GENERAL'},{label:'Grado',value:'GRADE'},{label:'Sección',value:'SECTION'}]"
+                    optionLabel="label" optionValue="value" styleClass="w-full" />
+            </div>
+            <div class="form-field">
+                <label>Máx. participantes</label>
+                <input pInputText type="number" formControlName="maxParticipants" placeholder="Sin límite" />
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-field form-field-2x">
+                <label>Descripción</label>
+                <textarea pTextarea formControlName="description" rows="2" placeholder="Descripción del evento..."
+                    style="resize:none"></textarea>
+            </div>
+            <div class="form-field form-field-col">
+                <label>Límite inscripción</label>
+                <p-datepicker formControlName="registrationDeadline" dateFormat="yy-mm-dd" placeholder="YYYY-MM-DD"
+                    styleClass="w-full" />
+                <div class="toggle-row">
+                    <label>Requiere pago</label>
+                    <p-toggleswitch formControlName="requiresPayment" />
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <ng-template pTemplate="footer">
+        <button pButton label="Cancelar" severity="secondary" [outlined]="true"
+            (click)="showEventForm.set(false)"></button>
+        <button pButton label="Crear Evento" icon="pi pi-check" [loading]="loadingForm()"
+            (click)="submitEvent()"></button>
+    </ng-template>
+</p-dialog>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- MODAL: INSCRIBIR ALUMNO                                                   -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<p-dialog header="Inscribir Alumno" [(visible)]="showRegDialog" [modal]="true" [draggable]="false"
+    [style]="{ width: '480px' }">
+    <div class="reg-form">
+        <div class="form-field">
+            <label>Alumno <span class="req">*</span></label>
+            <p-select [options]="studentOptions" [(ngModel)]="selectedStudentToReg" optionLabel="label"
+                optionValue="value" placeholder="Seleccionar alumno" [filter]="true"
+                filterPlaceholder="Buscar alumno..." styleClass="w-full" />
+        </div>
+        <div class="form-field">
+            <label>Notas / observaciones</label>
+            <textarea pTextarea [(ngModel)]="regNotes" rows="2" placeholder="Opcional..."
+                style="resize:none;width:100%"></textarea>
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <button pButton label="Cancelar" severity="secondary" [outlined]="true"
+            (click)="showRegDialog.set(false)"></button>
+        <button pButton label="Inscribir" icon="pi pi-user-plus" [disabled]="!selectedStudentToReg"
+            (click)="submitRegistration()"></button>
+    </ng-template>
+</p-dialog>
+
+<p-confirmDialog />
+<p-toast position="top-right" />

@@ -1,0 +1,93 @@
+<!-- src/app/shared/components/access/access-log-dialog/access-log-dialog.component.html -->
+<p-dialog [header]="dialogTitle" [(visible)]="visible" [modal]="true" [draggable]="false" [resizable]="false"
+    [style]="{ width: '520px', maxWidth: '95vw' }" [closeOnEscape]="true" (onHide)="close()">
+
+    <ng-template pTemplate="header">
+        <div class="dialog-header">
+            <div class="dialog-icon" [class.dialog-icon-staff]="!isStudentMode">
+                <i [class]="isStudentMode ? 'pi pi-user' : 'pi pi-id-card'"></i>
+            </div>
+            <div>
+                <h3 class="dialog-title">{{ dialogTitle }}</h3>
+                <p class="dialog-subtitle">Complete el registro de acceso</p>
+            </div>
+        </div>
+    </ng-template>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="form-body">
+
+        <!-- Seleccionar persona -->
+        <div class="field">
+            <label>{{ isStudentMode ? 'Alumno' : 'Empleado' }} <span class="req">*</span></label>
+            <p-select formControlName="subjectId" [options]="subjectOptions" optionLabel="label" optionValue="value"
+                [placeholder]="isStudentMode ? 'Seleccionar alumno' : 'Seleccionar empleado'" [filter]="true"
+                filterPlaceholder="Buscar..." [showClear]="true" [class.ng-invalid]="isFieldInvalid('subjectId')"
+                styleClass="w-full" />
+            @if (isFieldInvalid('subjectId')) {
+            <small class="error-msg">Seleccione una persona</small>
+            }
+        </div>
+
+        <!-- Fecha -->
+        <div class="field">
+            <label>Fecha <span class="req">*</span></label>
+            <input pInputText formControlName="accessDate" placeholder="YYYY-MM-DD" />
+        </div>
+
+        <!-- Toggle: está ausente -->
+        <div class="field field-switch">
+            <label>¿Registrar como ausente?</label>
+            <div class="switch-row">
+                <p-toggleswitch formControlName="isAbsent" />
+                <span class="switch-hint">{{ isAbsent ? 'Ausente — no habrá hora de entrada' : 'Presente' }}</span>
+            </div>
+        </div>
+
+        @if (!isAbsent) {
+        <p-divider />
+        <!-- Hora de entrada -->
+        <div class="field">
+            <label>Hora de Entrada</label>
+            <p-datepicker formControlName="entryTime" [timeOnly]="true" [showSeconds]="false" [showIcon]="true"
+                icon="pi pi-clock" placeholder="HH:MM" />
+        </div>
+
+        <!-- Hora de salida -->
+        <div class="field">
+            <label>Hora de Salida</label>
+            <p-datepicker formControlName="exitTime" [timeOnly]="true" [showSeconds]="false" [showIcon]="true"
+                icon="pi pi-clock" placeholder="HH:MM" />
+        </div>
+        } @else {
+        <!-- Si ausente: justificada? -->
+        <div class="field field-switch">
+            <label>¿Ausencia justificada?</label>
+            <div class="switch-row">
+                <p-toggleswitch formControlName="absenceJustified" />
+                <span class="switch-hint">
+                    {{ form.get('absenceJustified')?.value ? 'Sí, justificada' : 'No justificada' }}
+                </span>
+            </div>
+        </div>
+        }
+
+        <p-divider />
+
+        <!-- Observaciones -->
+        <div class="field">
+            <label>Observaciones</label>
+            <textarea pTextarea formControlName="observations" rows="2" placeholder="Tardanza, motivo, etc."
+                class="w-full resize-none">
+            </textarea>
+        </div>
+    </form>
+
+    <ng-template pTemplate="footer">
+        <div class="dialog-footer">
+            <p-button label="Cancelar" icon="pi pi-times" severity="secondary" [text]="true" (onClick)="close()" />
+            <p-button [label]="isAbsent ? 'Registrar Ausencia' : 'Registrar Acceso'"
+                [icon]="isAbsent ? 'pi pi-times-circle' : 'pi pi-check'" [severity]="isAbsent ? 'danger' : 'success'"
+                [loading]="loading()" (onClick)="onSubmit()" />
+        </div>
+    </ng-template>
+</p-dialog>

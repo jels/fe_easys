@@ -1,0 +1,112 @@
+<!-- src/app/shared/components/payments/payment-form-dialog/payment-form-dialog.component.html -->
+<p-dialog header="Registrar Pago" [(visible)]="visible" [modal]="true" [draggable]="false" [resizable]="false"
+    [style]="{ width: '580px', maxWidth: '95vw' }" [closeOnEscape]="true" (onHide)="close()">
+
+    <ng-template pTemplate="header">
+        <div class="dialog-header">
+            <div class="dialog-icon">
+                <i class="pi pi-dollar"></i>
+            </div>
+            <div>
+                <h3 class="dialog-title">Registrar Pago</h3>
+                <p class="dialog-subtitle">Complete los datos para generar el recibo</p>
+            </div>
+        </div>
+    </ng-template>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="form-body">
+
+        <!-- Alumno -->
+        <div class="field">
+            <label>Alumno <span class="req">*</span></label>
+            <p-select formControlName="idStudent" [options]="studentOptions" optionLabel="label" optionValue="value"
+                placeholder="Seleccionar alumno" [filter]="true" filterPlaceholder="Buscar..." [showClear]="true"
+                [class.ng-invalid]="isFieldInvalid('idStudent')" styleClass="w-full" />
+            @if (isFieldInvalid('idStudent')) {
+            <small class="error-msg">Seleccione un alumno</small>
+            }
+        </div>
+
+        <!-- Cuota pendiente (opcional, carga cuando se elige alumno) -->
+        @if (form.get('idStudent')?.value) {
+        <div class="field">
+            <label>Cuota a pagar <span class="label-optional">(opcional)</span></label>
+            @if (loadingInst()) {
+            <p-skeleton height="2.5rem" />
+            } @else if (installmentOptions.length > 0) {
+            <p-select formControlName="idPaymentInstallment" [options]="installmentOptions" optionLabel="label"
+                optionValue="value" placeholder="Seleccionar cuota pendiente" [showClear]="true" styleClass="w-full" />
+            } @else {
+            <div class="no-installments">
+                <i class="pi pi-check-circle"></i>
+                Sin cuotas pendientes para este alumno
+            </div>
+            }
+        </div>
+        }
+
+        <p-divider />
+
+        <!-- Concepto y Monto -->
+        <div class="form-grid">
+            <div class="field">
+                <label>Concepto <span class="req">*</span></label>
+                <p-select [options]="installmentOptions" optionLabel="label" optionValue="value"
+                    placeholder="Seleccionar cuota (opcional)" [class.ng-invalid]="false" styleClass="w-full" />
+                @if (false) {
+                <small class="error-msg">Seleccione un concepto</small>
+                }
+            </div>
+
+            <div class="field">
+                <label>Monto (PYG) <span class="req">*</span></label>
+                <p-inputnumber formControlName="amount" [useGrouping]="true" mode="decimal" placeholder="Ej: 400000"
+                    [class.ng-invalid]="isFieldInvalid('amount')" styleClass="w-full" />
+                @if (isFieldInvalid('amount')) {
+                <small class="error-msg">Ingrese un monto válido</small>
+                }
+            </div>
+        </div>
+
+        <!-- Fecha y Método -->
+        <div class="form-grid">
+            <div class="field">
+                <label>Fecha de Pago <span class="req">*</span></label>
+                <p-datepicker formControlName="paymentDate" dateFormat="yy-mm-dd" [showIcon]="true"
+                    placeholder="AAAA-MM-DD" />
+            </div>
+
+            <div class="field">
+                <label>Método de Pago <span class="req">*</span></label>
+                <p-select formControlName="idPaymentMethod" [options]="methodOptions" optionLabel="label"
+                    optionValue="value" optionLabel="label" optionValue="value" styleClass="w-full" />
+            </div>
+        </div>
+
+        <!-- Nro. referencia (si no es efectivo) -->
+        @if (requiresReference) {
+        <div class="field">
+            <label>Nro. de Referencia</label>
+            <input pInputText formControlName="referenceNumber" placeholder="Nro. de transferencia, tarjeta o cheque" />
+        </div>
+        }
+
+        <p-divider />
+
+        <!-- Notas -->
+        <div class="field">
+            <label>Observaciones</label>
+            <textarea pTextarea formControlName="notes" rows="2" placeholder="Observaciones adicionales del pago..."
+                class="w-full resize-none">
+            </textarea>
+        </div>
+    </form>
+
+    <ng-template pTemplate="footer">
+        <div class="dialog-footer">
+            <p-button label="Cancelar" icon="pi pi-times" severity="secondary" [text]="true" (onClick)="close()" />
+            <p-button label="Registrar y Generar Recibo" icon="pi pi-receipt" severity="success" [loading]="loading()"
+                (onClick)="onSubmit()" />
+        </div>
+    </ng-template>
+</p-dialog>

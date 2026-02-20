@@ -1,0 +1,101 @@
+<p-confirmDialog />
+
+<div class="card">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h2 class="text-2xl font-semibold text-surface-900 dark:text-surface-0 m-0">Personal</h2>
+            <p class="text-muted-color mt-1 mb-0">Gestión del personal institucional</p>
+        </div>
+        <p-button label="Nuevo Personal" icon="pi pi-plus" (onClick)="goToNew()" />
+    </div>
+
+    <!-- Filtros -->
+    <div class="flex flex-col md:flex-row gap-3 mb-4">
+        <p-iconfield class="flex-1">
+            <p-inputicon styleClass="pi pi-search" />
+            <input pInputText type="text" placeholder="Buscar por nombre, legajo, documento, cargo..."
+                [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" class="w-full" />
+        </p-iconfield>
+        <p-select [options]="staffTypeOptions" optionLabel="label" optionValue="value" placeholder="Filtrar por tipo"
+            [ngModel]="filterType()" (ngModelChange)="filterType.set($event)" class="w-full md:w-56" />
+    </div>
+
+    <!-- Tabla -->
+    <p-table [value]="filteredStaff()" [loading]="loading()" [paginator]="true" [rows]="10"
+        [rowsPerPageOptions]="[10, 25, 50]" [showCurrentPageReport]="true"
+        currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} registros"
+        styleClass="p-datatable-gridlines" responsiveLayout="scroll">
+        <ng-template #header>
+            <tr>
+                <th style="width: 4rem">#</th>
+                <th pSortableColumn="person.firstName">
+                    Nombre <p-sortIcon field="person.firstName" />
+                </th>
+                <th>Legajo</th>
+                <th>Tipo</th>
+                <th>Cargo / Área</th>
+                <th>Especialización</th>
+                <th>Estado</th>
+                <th style="width: 10rem" class="text-center">Acciones</th>
+            </tr>
+        </ng-template>
+
+        <ng-template #body let-member let-i="rowIndex">
+            <tr>
+                <td class="text-muted-color">{{ i + 1 }}</td>
+                <td>
+                    <div class="flex flex-col">
+                        <span class="font-medium text-surface-900 dark:text-surface-0">{{ getFullName(member) }}</span>
+                        <span class="text-sm text-muted-color">{{ member.person?.email ?? '—' }}</span>
+                    </div>
+                </td>
+                <td><span class="font-mono text-sm">{{ member.employeeNumber }}</span></td>
+                <td>
+                    <p-tag [value]="getTypeLabel(member.staffType)" [severity]="getTypeSeverity(member.staffType)" />
+                </td>
+                <td>
+                    <div class="flex flex-col">
+                        <span>{{ member.position ?? '—' }}</span>
+                        <span class="text-sm text-muted-color">{{ member.department ?? '' }}</span>
+                    </div>
+                </td>
+                <td>{{ member.specialization ?? '—' }}</td>
+                <td>
+                    <p-tag [value]="getStatusLabel(member.status)" [severity]="getStatusSeverity(member.status)" />
+                </td>
+                <td>
+                    <div class="flex items-center justify-center gap-2">
+                        <p-button icon="pi pi-eye" [text]="true" [rounded]="true" severity="info" size="small"
+                            pTooltip="Ver detalle" tooltipPosition="top" (onClick)="goToDetail(member.idStaff!)" />
+                        <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" severity="secondary" size="small"
+                            pTooltip="Editar" tooltipPosition="top" (onClick)="goToEdit(member.idStaff!)" />
+                        <p-button [icon]="member.isActive ? 'pi pi-ban' : 'pi pi-check-circle'" [text]="true"
+                            [rounded]="true" [severity]="member.isActive ? 'danger' : 'success'" size="small"
+                            [pTooltip]="member.isActive ? 'Desactivar' : 'Activar'" tooltipPosition="top"
+                            (onClick)="confirmToggle(member)" />
+                    </div>
+                </td>
+            </tr>
+        </ng-template>
+
+        <ng-template #emptymessage>
+            <tr>
+                <td colspan="8" class="text-center py-8 text-muted-color">
+                    <i class="pi pi-inbox text-4xl mb-3 block"></i>
+                    <span>No se encontraron registros de personal</span>
+                </td>
+            </tr>
+        </ng-template>
+
+        <ng-template #loadingbody>
+            @for (item of [1,2,3,4,5]; track item) {
+            <tr>
+                @for (col of [1,2,3,4,5,6,7,8]; track col) {
+                <td><p-skeleton height="2rem" /></td>
+                }
+            </tr>
+            }
+        </ng-template>
+    </p-table>
+</div>

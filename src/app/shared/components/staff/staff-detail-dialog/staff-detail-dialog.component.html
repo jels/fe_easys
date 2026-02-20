@@ -1,0 +1,311 @@
+<!-- src/app/shared/components/staff/staff-detail-dialog/staff-detail-dialog.component.html -->
+<p-dialog [(visible)]="visible" [modal]="true" [draggable]="false" [resizable]="false" styleClass="staff-detail-dialog"
+    [style]="{ width: '900px', maxWidth: '95vw' }" [closeOnEscape]="true" (onHide)="close()">
+
+    <ng-template pTemplate="header">
+        @if (loading()) {
+        <div class="dialog-header-skeleton">
+            <p-skeleton shape="circle" size="3rem" />
+            <div class="flex flex-col gap-1 flex-1">
+                <p-skeleton height="1.2rem" width="40%" />
+                <p-skeleton height="0.9rem" width="25%" />
+            </div>
+        </div>
+        } @else if (member()) {
+        <div class="dialog-header">
+            <div class="staff-avatar-lg" [attr.data-type]="member()!.staffType">
+                <span>{{ getInitials(fullName) }}</span>
+            </div>
+            <div class="dialog-header-info">
+                <h3 class="dialog-title">{{ fullName }}</h3>
+                <div class="dialog-header-meta">
+                    <span class="employee-chip">{{ member()!.employeeNumber }}</span>
+                    <p-tag [value]="getTypeLabel(member()!.staffType)" [severity]="getTypeSeverity(member()!.staffType)"
+                        styleClass="text-xs" />
+                    <p-tag [value]="getStatusLabel(member()!.status)" [severity]="getStatusSeverity(member()!.status)"
+                        styleClass="text-xs" />
+                    @if (member()!.position) {
+                    <span class="position-chip">{{ member()!.position }}</span>
+                    }
+                </div>
+            </div>
+            <p-button label="Editar" icon="pi pi-pencil" severity="secondary" size="small" (onClick)="editMember()" />
+        </div>
+        }
+    </ng-template>
+
+    @if (loading()) {
+    <div class="flex flex-col gap-3 p-4">
+        @for (i of [1,2,3]; track i) { <p-skeleton height="3rem" /> }
+    </div>
+    } @else if (member()) {
+    <p-tabs>
+        <p-tablist>
+            <p-tab value="0"><i class="pi pi-user mr-1"></i> Datos Personales</p-tab>
+            <p-tab value="1"><i class="pi pi-briefcase mr-1"></i> Datos Laborales</p-tab>
+            <p-tab value="2">
+                <i class="pi pi-clock mr-1"></i>
+                Asistencia ({{ totalLogs }})
+            </p-tab>
+            @if (isTeacher) {
+            <p-tab value="3">
+                <i class="pi pi-book mr-1"></i>
+                Materias / Secciones
+            </p-tab>
+            }
+        </p-tablist>
+
+        <p-tabpanels>
+
+            <!-- ── TAB 1: Datos Personales ──────────────────────────── -->
+            <p-tabpanel value="0">
+                <div class="detail-grid">
+                    <div class="detail-field">
+                        <span class="field-label">Nombres</span>
+                        <span class="field-value">{{ member()!.person.firstName }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Apellidos</span>
+                        <span class="field-value">{{ member()!.person.lastName }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Tipo Documento</span>
+                        <span class="field-value">{{ member()!.person.documentType }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Nro. Documento</span>
+                        <span class="field-value mono">{{ member()!.person.documentNumber }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Fecha de Nacimiento</span>
+                        <span class="field-value">{{ member()!.person.birthDate ?? '–' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Género</span>
+                        <span class="field-value">{{ member()!.person.gender ?? '–' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Celular</span>
+                        <span class="field-value">{{ member()!.person.mobilePhone ?? '–' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Teléfono</span>
+                        <span class="field-value">{{ member()!.person.phone ?? '–' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Email</span>
+                        <span class="field-value">{{ member()!.person.email ?? '–' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Ciudad</span>
+                        <span class="field-value">{{ member()!.person.city ?? '–' }}</span>
+                    </div>
+                    <div class="detail-field span-2">
+                        <span class="field-label">Dirección</span>
+                        <span class="field-value">{{ member()!.person.address ?? '–' }}</span>
+                    </div>
+                </div>
+            </p-tabpanel>
+
+            <!-- ── TAB 2: Datos Laborales / Contrato ────────────────── -->
+            <p-tabpanel value="1">
+                <div class="detail-grid">
+                    <div class="detail-field">
+                        <span class="field-label">Nº Legajo</span>
+                        <span class="field-value mono">{{ member()!.employeeNumber }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Tipo de Personal</span>
+                        <p-tag [value]="getTypeLabel(member()!.staffType)"
+                            [severity]="getTypeSeverity(member()!.staffType)" />
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Cargo</span>
+                        <span class="field-value">{{ member()!.position ?? '–' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Departamento</span>
+                        <span class="field-value">{{ member()!.department ?? '–' }}</span>
+                    </div>
+                    @if (isTeacher) {
+                    <div class="detail-field span-2">
+                        <span class="field-label">Especialización</span>
+                        <span class="field-value">{{ member()!.specialization ?? '–' }}</span>
+                    </div>
+                    }
+                    <div class="detail-field">
+                        <span class="field-label">Estado</span>
+                        <p-tag [value]="getStatusLabel(member()!.status)"
+                            [severity]="getStatusSeverity(member()!.status)" />
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Fecha de Ingreso</span>
+                        <span class="field-value">{{ member()!.hireDate }}</span>
+                    </div>
+                </div>
+
+                <p-divider align="left">
+                    <small class="text-muted">Contrato y Salario</small>
+                </p-divider>
+
+                <div class="detail-grid">
+                    <!--<div class="detail-field">
+                        <span class="field-label">Tipo de Contrato</span>
+                        <span class="field-value">{{ member()!.contractType ? getContractLabel(member()!.contractType!)
+                            : '–' }}</span>
+                    </div>-->
+                    <div class="detail-field">
+                        <span class="field-label">Salario Mensual</span>
+                        <span class="field-value salary">
+                            {{ member()!.salary ? formatCurrency(member()!.salary!) : '–' }}
+                        </span>
+                    </div>
+                    <!--<div class="detail-field span-2">
+                        <span class="field-label">Horario de Trabajo</span>
+                        <span class="field-value">{{ member()!.workSchedule ?? '–' }}</span>
+                    </div>
+                    @if (member()!.contractNotes) {
+                    <div class="detail-field span-2">
+                        <span class="field-label">Notas del Contrato</span>
+                        <span class="field-value contract-notes">{{ member()!.contractNotes }}</span>
+                    </div>
+                }-->
+                </div>
+            </p-tabpanel>
+
+            <!-- ── TAB 3: Asistencia ─────────────────────────────────── -->
+            <p-tabpanel value="2">
+                <!-- Resumen -->
+                @if (totalLogs > 0) {
+                <div class="attendance-summary">
+                    <div class="att-stat">
+                        <span class="att-value">{{ totalLogs }}</span>
+                        <span class="att-label">Registros</span>
+                    </div>
+                    <div class="att-stat warn">
+                        <span class="att-value">{{ lateLogs }}</span>
+                        <span class="att-label">Tardanzas</span>
+                    </div>
+                    <!--<div class="att-stat danger">
+                        <span class="att-value">{{ absentLogs }}</span>
+                        <span class="att-label">Ausencias</span>
+                    </div>
+                    <div class="att-stat success">
+                        <span class="att-value">{{ totalLogs - absentLogs }}</span>
+                        <span class="att-label">Presentes</span>
+                    </div>-->
+                </div>
+                }
+
+                <p-table [value]="accessLogs()" styleClass="p-datatable-sm mt-3" [paginator]="accessLogs().length > 8"
+                    [rows]="8">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Entrada</th>
+                            <th>Salida</th>
+                            <th class="text-center">Tardanza</th>
+                            <th class="text-center">Ausente</th>
+                            <th>Observaciones</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-log>
+                        <tr>
+                            <td>{{ log.accessDate }}</td>
+                            <td>{{ log.entryTime ? formatDatetime(log.entryTime) : '–' }}</td>
+                            <td>{{ log.exitTime ? formatDatetime(log.exitTime) : '–' }}</td>
+                            <td class="text-center">
+                                @if (log.isLate) {
+                                <p-tag value="Tardanza" severity="warn" />
+                                } @else {
+                                <i class="pi pi-check text-green-500"></i>
+                                }
+                            </td>
+                            <td class="text-center">
+                                @if (log.isAbsent) {
+                                <p-tag [value]="log.absenceJustified ? 'Justificada' : 'Injustificada'"
+                                    [severity]="log.absenceJustified ? 'info' : 'danger'" />
+                                } @else {
+                                <i class="pi pi-check text-green-500"></i>
+                                }
+                            </td>
+                            <td>{{ log.observations ?? '–' }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted-color">
+                                <i class="pi pi-clock text-2xl block mb-2"></i>
+                                Sin registros de asistencia
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </p-tabpanel>
+
+            <!-- ── TAB 4: Materias / Secciones (solo docentes) ───────── -->
+            @if (isTeacher) {
+            <p-tabpanel value="3">
+                <!-- Secciones como titular -->
+                @if (sections().length > 0) {
+                <div class="section-block">
+                    <div class="section-block-title">
+                        <i class="pi pi-users"></i>
+                        Secciones como Tutor / Titular
+                    </div>
+                    <div class="sections-grid">
+                        @for (section of sections(); track section.idSection) {
+                        <div class="section-card">
+                            <div class="section-card-name">{{ section.name }}</div>
+                            <div class="section-card-sub">{{ section.gradeName }}</div>
+                            <!-- <div class="section-card-sub">
+                                Capacidad: {{ section.capacity }} alumnos
+                            </div>-->
+                        </div>
+                        }
+                    </div>
+                </div>
+                }
+
+                <!-- Materias -->
+                <div class="section-block" [class.mt-5]="sections().length > 0">
+                    <div class="section-block-title">
+                        <i class="pi pi-book"></i>
+                        Materias Asignadas
+                    </div>
+                    <p-table [value]="subjects()" styleClass="p-datatable-sm mt-2">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th>Código</th>
+                                <th>Materia</th>
+                                <th>Horas Semanales</th>
+                                <th class="text-center">Obligatoria</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-subject>
+                            <tr>
+                                <td><span class="mono text-sm">{{ subject.code }}</span></td>
+                                <td class="font-medium">{{ subject.name }}</td>
+                                <td>{{ subject.weeklyHours ?? '–' }} hs</td>
+                                <td class="text-center">
+                                    <i
+                                        [class]="subject.isMandatory ? 'pi pi-check-circle text-green-500' : 'pi pi-times-circle text-red-400'"></i>
+                                </td>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="emptymessage">
+                            <tr>
+                                <td colspan="4" class="text-center py-5 text-muted-color">
+                                    Sin materias asignadas
+                                </td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
+                </div>
+            </p-tabpanel>
+            }
+
+        </p-tabpanels>
+    </p-tabs>
+    }
+</p-dialog>

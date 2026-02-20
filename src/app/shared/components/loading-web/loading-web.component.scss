@@ -1,0 +1,71 @@
+@font-face {
+    font-family: 'Finger Paint';
+    src: url('FingerPaint-Regular.ttf') format('trueType');
+    font-weight: normal;
+    font-style: normal;
+}
+
+.spinner {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh; /* Altura completa de la ventana */
+    width: 100vw; /* Ancho completo de la ventana */
+    position: fixed; /* Fijar en la pantalla */
+    top: 0;
+    left: 0;
+}
+
+.ring {
+    position: absolute;
+    border-radius: 50%;
+}
+
+.ring:nth-child(1) {
+    width: 250px;
+    height: 250px;
+    border-top: 5px solid #252772;
+    animation: rotate-forward 2s linear infinite;
+}
+
+.ring:nth-child(2) {
+    width: 230px;
+    height: 230px;
+    border-top: 5px solid #6bb9dc;
+    transform: rotate(45deg);
+    animation: rotate-backward 2.5s linear infinite;
+}
+
+.ring:nth-child(3) {
+    width: 210px;
+    height: 210px;
+    border-top: 5px solid #36a9e1;
+    transform: rotate(90deg);
+    animation: rotate-forward 3s linear infinite;
+}
+
+.loading-text {
+    font-family: 'Finger Paint', sans-serif; /* Aplica la fuente Venera */
+    position: absolute;
+    // font-family: cursive;
+    font-size: 16px;
+    color: #252772;
+    z-index: 10;
+}
+@keyframes rotate-forward {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes rotate-backward {
+    0% {
+        transform: rotate(360deg);
+    }
+    100% {
+        transform: rotate(0deg);
+    }
+}

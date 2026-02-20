@@ -1,0 +1,239 @@
+<!-- src/app/shared/components/student/student-form-dialog/student-form-dialog.component.html -->
+<p-dialog [header]="dialogTitle" [(visible)]="visible" [modal]="true" [draggable]="false" [resizable]="false"
+    styleClass="student-form-dialog" [style]="{ width: '860px', maxWidth: '95vw' }" [closeOnEscape]="true"
+    (onHide)="close()">
+
+    <!-- Subtitle -->
+    <ng-template pTemplate="header">
+        <div class="dialog-header">
+            <div class="dialog-header-icon">
+                <i [class]="isEditMode() ? 'pi pi-pencil' : 'pi pi-user-plus'"></i>
+            </div>
+            <div>
+                <h3 class="dialog-title">{{ dialogTitle }}</h3>
+                <p class="dialog-subtitle">{{ dialogSubtitle }}</p>
+            </div>
+        </div>
+    </ng-template>
+
+    <!-- Content -->
+    @if (loadingData()) {
+    <div class="flex flex-col gap-3 p-4">
+        @for (i of [1,2,3,4]; track i) {
+        <p-skeleton height="3rem" />
+        }
+    </div>
+    } @else {
+    <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <p-stepper [value]="activeStep()" (valueChange)="activeStep.set($event ?? 0)" styleClass="dialog-stepper">
+
+            <p-step-list>
+                <p-step [value]="0">
+                    <i class="pi pi-user mr-1"></i> Datos Personales
+                </p-step>
+                <p-step [value]="1">
+                    <i class="pi pi-book mr-1"></i> Datos Académicos
+                </p-step>
+                <p-step [value]="2">
+                    <i class="pi pi-heart mr-1"></i> Emergencia
+                </p-step>
+            </p-step-list>
+
+            <p-step-panels>
+
+                <!-- ── PASO 1: Datos Personales ──────────────────────────── -->
+                <p-step-panel [value]="0">
+                    <ng-template #content let-activateCallback="activateCallback">
+                        <div formGroupName="person" class="form-grid mt-3">
+
+                            <div class="field">
+                                <label>Nombres <span class="req">*</span></label>
+                                <input pInputText formControlName="firstName" placeholder="Ej: Juan Pablo"
+                                    [class.ng-invalid]="isFieldInvalid('person.firstName')" />
+                                @if (isFieldInvalid('person.firstName')) {
+                                <small class="error-msg">El nombre es requerido</small>
+                                }
+                            </div>
+
+                            <div class="field">
+                                <label>Apellidos <span class="req">*</span></label>
+                                <input pInputText formControlName="lastName" placeholder="Ej: García López"
+                                    [class.ng-invalid]="isFieldInvalid('person.lastName')" />
+                                @if (isFieldInvalid('person.lastName')) {
+                                <small class="error-msg">El apellido es requerido</small>
+                                }
+                            </div>
+
+                            <div class="field">
+                                <label>Tipo Documento <span class="req">*</span></label>
+                                <p-select formControlName="documentType" [options]="documentTypeOptions"
+                                    optionLabel="label" optionValue="value" placeholder="Seleccionar" />
+                            </div>
+
+                            <div class="field">
+                                <label>Nro. Documento <span class="req">*</span></label>
+                                <input pInputText formControlName="documentNumber" placeholder="Ej: 1234567"
+                                    [class.ng-invalid]="isFieldInvalid('person.documentNumber')" />
+                                @if (isFieldInvalid('person.documentNumber')) {
+                                <small class="error-msg">El documento es requerido</small>
+                                }
+                            </div>
+
+                            <div class="field">
+                                <label>Fecha de Nacimiento</label>
+                                <p-datepicker formControlName="birthDate" dateFormat="dd/mm/yy" [showIcon]="true"
+                                    placeholder="DD/MM/AAAA" />
+                            </div>
+
+                            <div class="field">
+                                <label>Género</label>
+                                <p-select formControlName="gender" [options]="genderOptions" optionLabel="label"
+                                    optionValue="value" placeholder="Seleccionar" />
+                            </div>
+
+                            <div class="field">
+                                <label>Grupo Sanguíneo</label>
+                                <p-select formControlName="bloodType" [options]="bloodTypeOptions" optionLabel="label"
+                                    optionValue="value" placeholder="Seleccionar" />
+                            </div>
+
+                            <div class="field">
+                                <label>Celular</label>
+                                <input pInputText formControlName="mobilePhone" placeholder="Ej: 0981-000000" />
+                            </div>
+
+                            <div class="field">
+                                <label>Teléfono</label>
+                                <input pInputText formControlName="phone" placeholder="Ej: 021-000000" />
+                            </div>
+
+                            <div class="field">
+                                <label>Email</label>
+                                <input pInputText formControlName="email" type="email" placeholder="correo@ejemplo.com"
+                                    [class.ng-invalid]="isFieldInvalid('person.email')" />
+                                @if (isFieldInvalid('person.email')) {
+                                <small class="error-msg">Ingrese un email válido</small>
+                                }
+                            </div>
+
+                            <div class="field">
+                                <label>Ciudad</label>
+                                <input pInputText formControlName="city" placeholder="Ej: Asunción" />
+                            </div>
+
+                            <div class="field col-span-2">
+                                <label>Dirección</label>
+                                <input pInputText formControlName="address" placeholder="Calle, número, barrio" />
+                            </div>
+                        </div>
+
+                        <div class="step-footer">
+                            <span></span>
+                            <p-button label="Siguiente" icon="pi pi-arrow-right" iconPos="right"
+                                (onClick)="activateCallback(1)" />
+                        </div>
+                    </ng-template>
+                </p-step-panel>
+
+                <!-- ── PASO 2: Datos Académicos ───────────────────────────── -->
+                <p-step-panel [value]="1">
+                    <ng-template #content let-activateCallback="activateCallback">
+                        <div class="form-grid mt-3">
+
+                            <div class="field">
+                                <label>Nº Matrícula <span class="req">*</span></label>
+                                <input pInputText formControlName="enrollmentNumber" placeholder="Ej: EST-2025-001"
+                                    [class.ng-invalid]="isFieldInvalid('enrollmentNumber')" />
+                                @if (isFieldInvalid('enrollmentNumber')) {
+                                <small class="error-msg">La matrícula es requerida</small>
+                                }
+                            </div>
+
+                            <div class="field">
+                                <label>Fecha Inscripción <span class="req">*</span></label>
+                                <p-datepicker formControlName="enrollmentDate" dateFormat="dd/mm/yy" [showIcon]="true"
+                                    placeholder="DD/MM/AAAA" />
+                            </div>
+
+                            <div class="field">
+                                <label>Estado</label>
+                                <p-select formControlName="status" [options]="statusOptions" optionLabel="label"
+                                    optionValue="value" placeholder="Seleccionar" />
+                            </div>
+
+                            <div class="field">
+                                <label>Sucursal</label>
+                                <p-select formControlName="idBranch" [options]="branches()" optionLabel="name"
+                                    optionValue="idBranch" placeholder="Seleccionar sucursal" [showClear]="true" />
+                            </div>
+
+                            <div class="field">
+                                <label>Grado</label>
+                                <p-select formControlName="idCurrentGrade" [options]="grades()" optionLabel="name"
+                                    optionValue="idGrade" placeholder="Seleccionar grado" [showClear]="true" />
+                            </div>
+
+                            <div class="field">
+                                <label>Sección</label>
+                                <p-select formControlName="idCurrentSection" [options]="sections()" optionLabel="name"
+                                    optionValue="idSection" placeholder="Seleccionar sección" [showClear]="true"
+                                    [disabled]="!form.get('idCurrentGrade')?.value" />
+                            </div>
+                        </div>
+
+                        <div class="step-footer">
+                            <p-button label="Anterior" icon="pi pi-arrow-left" severity="secondary"
+                                (onClick)="activateCallback(0)" />
+                            <p-button label="Siguiente" icon="pi pi-arrow-right" iconPos="right"
+                                (onClick)="activateCallback(2)" />
+                        </div>
+                    </ng-template>
+                </p-step-panel>
+
+                <!-- ── PASO 3: Contacto Emergencia ───────────────────────── -->
+                <p-step-panel [value]="2">
+                    <ng-template #content let-activateCallback="activateCallback">
+                        <div class="form-grid mt-3">
+
+                            <div class="field">
+                                <label>Nombre del Contacto</label>
+                                <input pInputText formControlName="emergencyContactName"
+                                    placeholder="Nombre completo" />
+                            </div>
+
+                            <div class="field">
+                                <label>Teléfono de Contacto</label>
+                                <input pInputText formControlName="emergencyContactPhone"
+                                    placeholder="Ej: 0981-000000" />
+                            </div>
+
+                            <div class="field">
+                                <label>Parentesco</label>
+                                <p-select formControlName="emergencyContactRelationship" [options]="relationshipOptions"
+                                    optionLabel="label" optionValue="value" placeholder="Seleccionar parentesco"
+                                    [showClear]="true" />
+                            </div>
+
+                            <div class="field col-span-2">
+                                <label>Observaciones Médicas</label>
+                                <textarea pTextarea formControlName="medicalObservations" rows="3"
+                                    placeholder="Alergias, condiciones médicas, medicamentos, etc."
+                                    class="w-full resize-none">
+                                    </textarea>
+                            </div>
+                        </div>
+
+                        <div class="step-footer">
+                            <p-button label="Anterior" icon="pi pi-arrow-left" severity="secondary"
+                                (onClick)="activateCallback(1)" />
+                            <p-button [label]="isEditMode() ? 'Actualizar' : 'Guardar'" icon="pi pi-save" type="submit"
+                                [loading]="loading()" (onClick)="onSubmit()" />
+                        </div>
+                    </ng-template>
+                </p-step-panel>
+
+            </p-step-panels>
+        </p-stepper>
+    </form>
+    }
+</p-dialog>

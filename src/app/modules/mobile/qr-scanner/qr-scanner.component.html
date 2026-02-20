@@ -1,0 +1,103 @@
+<!-- src/app/modules/mobile/qr-scanner/qr-scanner.component.html -->
+<div class="scanner-page" [style.--mode-color]="modeColor()">
+
+    <!-- Header -->
+    <div class="scanner-header">
+        <button class="btn-back" (click)="finalize()">
+            <span>‹</span>
+        </button>
+        <div class="header-center">
+            <span class="header-mode-icon">{{ currentConfig.icon }}</span>
+            <span class="header-title">{{ modeLabel() }}</span>
+        </div>
+        <div class="scan-counter">
+            <span class="count-num">{{ scanCount() }}</span>
+            <span class="count-lbl">escaneados</span>
+        </div>
+    </div>
+
+    <!-- Selector de modo -->
+    <div class="mode-selector">
+        <button class="mode-btn" [class.active]="mode() === 'ENTRADA'" (click)="setMode('ENTRADA')">
+            <span>🟢</span> Entrada
+        </button>
+        <button class="mode-btn" [class.active]="mode() === 'RETIRO'" (click)="setMode('RETIRO')">
+            <span>🟡</span> Retiro
+        </button>
+        <button class="mode-btn" [class.active]="mode() === 'SALIDA'" (click)="setMode('SALIDA')">
+            <span>🔴</span> Salida
+        </button>
+    </div>
+
+    <!-- Scanner -->
+    <div class="scanner-viewport" [class.flash-green]="flashActive()">
+
+        @if (!hasCamera()) {
+        <div class="no-camera">
+            <span class="no-camera-icon">📷</span>
+            <p>No se detectó cámara</p>
+            <small>Asegurate de dar permisos de cámara</small>
+        </div>
+        } @else {
+        <zxing-scanner [enable]="scannerEnabled()" [device]="selectedCamera()" [formats]="formats"
+            (camerasFound)="onCamerasFound($event)" (camerasNotFound)="onCamerasNotFound()"
+            (scanSuccess)="onCodeScanned($event)" (scanError)="onScanError($event)" [style.width]="'100%'"
+            [style.height]="'100%'">
+        </zxing-scanner>
+
+        <!-- Marco de escaneo -->
+        <div class="scan-frame">
+            <div class="corner tl"></div>
+            <div class="corner tr"></div>
+            <div class="corner bl"></div>
+            <div class="corner br"></div>
+            <div class="scan-line"></div>
+        </div>
+
+        <!-- Texto guía -->
+        <div class="scan-hint">
+            <span>Apuntá al código QR del carnet</span>
+        </div>
+        }
+    </div>
+
+    <!-- Feedback overlay -->
+    @if (feedback().visible) {
+    <div class="feedback-overlay" [class.feedback-success]="feedback().success"
+        [class.feedback-error]="!feedback().success">
+        <div class="feedback-icon">
+            {{ feedback().success ? '✅' : '❌' }}
+        </div>
+        <div class="feedback-name">{{ feedback().name }}</div>
+        @if (feedback().grade) {
+        <div class="feedback-grade">{{ feedback().grade }}</div>
+        }
+        <div class="feedback-type-badge">{{ feedback().type }}</div>
+        <div class="feedback-message">{{ feedback().message }}</div>
+    </div>
+    }
+
+    <!-- Log de sesión -->
+    @if (scanLog().length > 0) {
+    <div class="session-log">
+        <div class="session-log-title">Registros de esta sesión</div>
+        <div class="session-log-list">
+            @for (item of scanLog(); track $index) {
+            <div class="log-item" [class.log-success]="item.success">
+                <span class="log-icon">{{ item.success ? '✓' : '✗' }}</span>
+                <span class="log-name">{{ item.name }}</span>
+                <span class="log-time">{{ item.time }}</span>
+            </div>
+            }
+        </div>
+    </div>
+    }
+
+    <!-- Botón Finalizar -->
+    <div class="scanner-footer">
+        <button class="btn-finalize" (click)="finalize()">
+            Finalizar sesión
+        </button>
+    </div>
+
+</div>

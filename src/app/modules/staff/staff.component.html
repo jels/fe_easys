@@ -1,0 +1,222 @@
+<!-- src/app/modules/staff/staff.component.html -->
+<div class="staff-page">
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-header-content">
+            <div class="page-title-section">
+                <h1 class="page-title">
+                    <i class="pi pi-id-card"></i>
+                    Personal
+                </h1>
+                <p class="page-subtitle">Gestión del personal docente y administrativo</p>
+            </div>
+            <button pButton icon="pi pi-plus" label="Nuevo Empleado" class="p-button-primary" (click)="openCreate()">
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters Card -->
+    <div class="filters-card">
+        <div class="filters-header">
+            <h3 class="filters-title">
+                <i class="pi pi-filter"></i>
+                Filtros
+            </h3>
+            @if (hasActiveFilters) {
+            <button pButton icon="pi pi-filter-slash" label="Limpiar" class="p-button-text p-button-sm"
+                (click)="clearFilters()">
+            </button>
+            }
+        </div>
+        <div class="filters-content">
+            <div class="filter-item filter-search">
+                <span class="p-input-icon-left w-full">
+                    <i class="pi pi-search"></i>
+                    <input type="text" pInputText placeholder="Buscar por nombre, legajo, CI, cargo o depto..."
+                        [(ngModel)]="searchQuery" (keyup.enter)="onSearch()" class="w-full" />
+                </span>
+            </div>
+            <div class="filter-item">
+                <p-select [options]="typeOptions" [(ngModel)]="selectedType" optionLabel="label" optionValue="value"
+                    placeholder="Tipo de personal" [showClear]="true" (onChange)="onFilterChange()" styleClass="w-full">
+                </p-select>
+            </div>
+            <div class="filter-item">
+                <p-select [options]="statusOptions" [(ngModel)]="selectedStatus" optionLabel="label" optionValue="value"
+                    placeholder="Estado" [showClear]="true" (onChange)="onFilterChange()" styleClass="w-full">
+                </p-select>
+            </div>
+            <div class="filter-item">
+                <button pButton icon="pi pi-search" label="Buscar" class="p-button-primary w-full" (click)="onSearch()">
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions Bar -->
+    <div class="actions-bar">
+        <div class="actions-left">
+            @if (!loading()) {
+            <span class="results-count">
+                <i class="pi pi-id-card"></i>
+                {{ totalRecords() }} empleado(s) encontrado(s)
+            </span>
+            }
+        </div>
+        <div class="actions-right">
+            <button pButton icon="pi pi-refresh" label="Actualizar" class="p-button-outlined p-button-sm"
+                (click)="loadStaff()" [disabled]="loading()">
+            </button>
+            <button pButton icon="pi pi-file-excel" label="Exportar"
+                class="p-button-success p-button-outlined p-button-sm" (click)="exportToExcel()">
+            </button>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="table-card">
+        <p-table [value]="staffList()" [loading]="loading()" [paginator]="true" [rows]="pageSize"
+            [totalRecords]="totalRecords()" [lazy]="true" (onLazyLoad)="onPageChange($event)"
+            [rowsPerPageOptions]="pageSizeOptions" [showCurrentPageReport]="true"
+            currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} empleados" dataKey="idStaff"
+            styleClass="p-datatable-striped" responsiveLayout="scroll">
+
+            <ng-template pTemplate="loadingbody">
+                <tr *ngFor="let i of [1,2,3,4,5]">
+                    <td colspan="7"><p-skeleton height="2.5rem" /></td>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="header">
+                <tr>
+                    <th style="width: 60px"></th>
+                    <th pSortableColumn="employeeNumber">
+                        Legajo <p-sortIcon field="employeeNumber" />
+                    </th>
+                    <th pSortableColumn="fullName">
+                        Nombre <p-sortIcon field="fullName" />
+                    </th>
+                    <th>Cargo / Dpto.</th>
+                    <th>Contacto</th>
+                    <th style="width: 120px; text-align:center">Tipo</th>
+                    <th style="width: 100px; text-align:center">Estado</th>
+                    <th style="width: 165px; text-align:center">Acciones</th>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-member>
+                <tr>
+                    <!-- Avatar -->
+                    <td>
+                        <div class="staff-avatar" (click)="openDetail(member)" [attr.data-type]="member.staffType">
+                            <span class="initials">{{ getInitials(member.fullName) }}</span>
+                        </div>
+                    </td>
+
+                    <!-- Legajo -->
+                    <td>
+                        <span class="employee-code">{{ member.employeeNumber }}</span>
+                    </td>
+
+                    <!-- Nombre -->
+                    <td>
+                        <div class="staff-name-cell" (click)="openDetail(member)">
+                            <div class="staff-name">{{ member.fullName }}</div>
+                            <div class="staff-sub">
+                                {{ member.person.documentType }}: {{ member.person.documentNumber }}
+                            </div>
+                        </div>
+                    </td>
+
+                    <!-- Cargo / Dpto -->
+                    <td>
+                        @if (member.position) {
+                        <div class="staff-name" style="font-weight: 600">{{ member.position }}</div>
+                        }
+                        @if (member.department) {
+                        <div class="staff-sub">{{ member.department }}</div>
+                        }
+                        @if (member.specialization) {
+                        <div class="staff-sub specialization">
+                            <i class="pi pi-book mr-1"></i>{{ member.specialization }}
+                        </div>
+                        }
+                    </td>
+
+                    <!-- Contacto -->
+                    <td>
+                        @if (member.person.mobilePhone) {
+                        <div class="staff-sub">
+                            <i class="pi pi-phone mr-1"></i>{{ member.person.mobilePhone }}
+                        </div>
+                        }
+                        @if (member.person.email) {
+                        <a [href]="'mailto:' + member.person.email" class="staff-email">
+                            {{ member.person.email }}
+                        </a>
+                        }
+                    </td>
+
+                    <!-- Tipo -->
+                    <td class="text-center">
+                        <p-tag [value]="getTypeLabel(member.staffType)"
+                            [severity]="getTypeSeverity(member.staffType)" />
+                    </td>
+
+                    <!-- Estado -->
+                    <td class="text-center">
+                        <p-tag [value]="getStatusLabel(member.status)" [severity]="getStatusSeverity(member.status)" />
+                    </td>
+
+                    <!-- Acciones -->
+                    <td>
+                        <div class="action-buttons">
+                            <button pButton icon="pi pi-eye" class="p-button-rounded p-button-text p-button-info"
+                                (click)="openDetail(member)" pTooltip="Ver detalle" tooltipPosition="top">
+                            </button>
+                            <button pButton icon="pi pi-pencil" class="p-button-rounded p-button-text p-button-warning"
+                                (click)="openEdit(member)" pTooltip="Editar" tooltipPosition="top">
+                            </button>
+                            <button pButton [icon]="member.status === 'ACTIVE' ? 'pi pi-ban' : 'pi pi-check'"
+                                class="p-button-rounded p-button-text"
+                                [ngClass]="member.status === 'ACTIVE' ? 'p-button-secondary' : 'p-button-success'"
+                                (click)="toggleStatus(member)"
+                                [pTooltip]="member.status === 'ACTIVE' ? 'Desactivar' : 'Activar'"
+                                tooltipPosition="top">
+                            </button>
+                            <button pButton icon="pi pi-trash" class="p-button-rounded p-button-text p-button-danger"
+                                (click)="deleteStaff(member)" pTooltip="Eliminar" tooltipPosition="top">
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="8">
+                        <div class="empty-state">
+                            <i class="pi pi-id-card"></i>
+                            <h3>No se encontró personal</h3>
+                            <p>No hay empleados que coincidan con los filtros aplicados</p>
+                            <button pButton icon="pi pi-plus" label="Agregar Empleado" class="p-button-primary"
+                                (click)="openCreate()">
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+</div>
+
+<p-toast position="top-right" />
+<p-confirmDialog />
+
+<!-- Modales -->
+<app-staff-form-dialog [visible]="showFormDialog()" [staffId]="selectedStaffId()" (onSave)="onFormSaved()"
+    (onClose)="onFormClosed()" />
+
+<app-staff-detail-dialog [visible]="showDetailDialog()" [staffId]="selectedStaffId()" (onEdit)="openEdit($event)"
+    (onClose)="onDetailClosed()" />

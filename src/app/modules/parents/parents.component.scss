@@ -1,0 +1,263 @@
+// src/app/modules/parents/parents.component.scss
+
+:host {
+    display: block;
+}
+
+.parents-page {
+    animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+// ── Page Header ───────────────────────────────────────────────────────────────
+.page-header {
+    margin-bottom: 1.5rem;
+}
+
+.page-header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.page-title-section {
+    flex: 1;
+}
+
+.page-title {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: var(--surface-900);
+    margin: 0 0 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    i {
+        color: var(--primary-color);
+    }
+}
+
+.page-subtitle {
+    color: var(--text-color-secondary);
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+// ── Filters Card ──────────────────────────────────────────────────────────────
+.filters-card {
+    background: var(--surface-card);
+    border-radius: 0.75rem;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.25rem;
+    box-shadow: var(--card-shadow);
+}
+
+.filters-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.filters-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--surface-900);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    i {
+        color: var(--text-color-secondary);
+    }
+}
+
+.filters-content {
+    display: grid;
+    grid-template-columns: 2fr 1.5fr auto;
+    gap: 1rem;
+    align-items: end;
+}
+
+.filter-item {
+    display: flex;
+    flex-direction: column;
+}
+
+// ── Actions Bar ───────────────────────────────────────────────────────────────
+.actions-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding: 0 0.25rem;
+}
+
+.actions-left,
+.actions-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.results-count {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text-color-secondary);
+    font-size: 0.9rem;
+    font-weight: 500;
+    i {
+        color: var(--primary-color);
+    }
+}
+
+// ── Table Card ────────────────────────────────────────────────────────────────
+.table-card {
+    background: var(--surface-card);
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    box-shadow: var(--card-shadow);
+}
+
+// ── Parent Avatar (con iniciales) ─────────────────────────────────────────────
+.parent-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-400, #60a5fa), var(--primary-600, #2563eb));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+    flex-shrink: 0;
+
+    &:hover {
+        transform: scale(1.08);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+}
+
+.initials {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: white;
+    letter-spacing: 0.05em;
+}
+
+// ── Table Cells ───────────────────────────────────────────────────────────────
+.parent-name-cell {
+    cursor: pointer;
+    &:hover .parent-name {
+        color: var(--primary-color);
+    }
+}
+
+.parent-name {
+    font-weight: 600;
+    color: var(--surface-900);
+    font-size: 0.9rem;
+    transition: color 0.2s ease;
+}
+
+.parent-sub {
+    font-size: 0.78rem;
+    color: var(--text-color-secondary);
+    margin-top: 0.1rem;
+}
+
+.doc-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    background: var(--primary-50, rgba(59, 130, 246, 0.08));
+    padding: 0.1rem 0.35rem;
+    border-radius: 0.25rem;
+}
+
+.parent-email {
+    font-size: 0.8rem;
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: color 0.2s ease;
+    &:hover {
+        text-decoration: underline;
+    }
+}
+
+.text-muted {
+    color: var(--text-color-secondary);
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────────
+.action-buttons {
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+    justify-content: center;
+}
+
+// ── Empty State ───────────────────────────────────────────────────────────────
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    i {
+        font-size: 3.5rem;
+        color: var(--surface-300);
+        margin-bottom: 1rem;
+        display: block;
+    }
+    h3 {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: var(--surface-700);
+        margin: 0 0 0.4rem;
+    }
+    p {
+        color: var(--text-color-secondary);
+        margin: 0 0 1.25rem;
+    }
+}
+
+// ── Responsive ────────────────────────────────────────────────────────────────
+@media (max-width: 1024px) {
+    .filters-content {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .page-header-content {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .page-title {
+        font-size: 1.375rem;
+    }
+    .filters-content {
+        grid-template-columns: 1fr;
+    }
+    .actions-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+    .actions-left,
+    .actions-right {
+        justify-content: center;
+    }
+}

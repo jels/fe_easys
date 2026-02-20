@@ -1,0 +1,271 @@
+<!-- src/app/shared/components/parent/parent-detail-dialog/parent-detail-dialog.component.html -->
+<p-dialog [(visible)]="visible" [modal]="true" [draggable]="false" [resizable]="false" styleClass="parent-detail-dialog"
+    [style]="{ width: '860px', maxWidth: '95vw' }" [closeOnEscape]="true" (onHide)="close()">
+
+    <!-- Header -->
+    <ng-template pTemplate="header">
+        @if (loading()) {
+        <div class="dialog-header-skeleton">
+            <p-skeleton shape="circle" size="3rem" />
+            <div class="flex flex-col gap-1 flex-1">
+                <p-skeleton height="1.2rem" width="40%" />
+                <p-skeleton height="0.9rem" width="25%" />
+            </div>
+        </div>
+        } @else if (parent()) {
+        <div class="dialog-header">
+            <div class="parent-avatar-lg">
+                <span>{{ getInitials(fullName) }}</span>
+            </div>
+            <div class="dialog-header-info">
+                <h3 class="dialog-title">{{ fullName }}</h3>
+                <div class="dialog-header-meta">
+                    <span class="doc-chip">
+                        {{ parent()!.person.documentType }}: {{ parent()!.person.documentNumber }}
+                    </span>
+                    @if (parent()!.isFinancialResponsible) {
+                    <p-tag value="Resp. Financiero" severity="success" styleClass="text-xs" />
+                    }
+                    <p-tag [value]="parent()!.isActive ? 'Activo' : 'Inactivo'"
+                        [severity]="parent()!.isActive ? 'success' : 'danger'" styleClass="text-xs" />
+                </div>
+            </div>
+            <p-button label="Editar" icon="pi pi-pencil" severity="secondary" size="small" (onClick)="editParent()" />
+        </div>
+        }
+    </ng-template>
+
+    <!-- Body -->
+    @if (loading()) {
+    <div class="flex flex-col gap-3 p-4">
+        @for (i of [1,2,3]; track i) { <p-skeleton height="3rem" /> }
+    </div>
+    } @else if (parent()) {
+    <p-tabs>
+        <p-tablist>
+            <p-tab value="0"><i class="pi pi-user mr-1"></i> Datos Personales</p-tab>
+            <p-tab value="1">
+                <i class="pi pi-users mr-1"></i>
+                Estudiantes ({{ linkedStudents().length }})
+            </p-tab>
+            <p-tab value="2">
+                <i class="pi pi-wallet mr-1"></i>
+                Pagos ({{ payments().length }})
+            </p-tab>
+            <p-tab value="3">
+                <i class="pi pi-clock mr-1"></i>
+                Accesos / Retiros ({{ earlyDepartures().length }})
+            </p-tab>
+        </p-tablist>
+
+        <p-tabpanels>
+
+            <!-- ── TAB 1: Datos Personales ──────────────────────────────── -->
+            <p-tabpanel value="0">
+                <div class="detail-grid">
+                    <div class="detail-field">
+                        <span class="field-label">Nombres</span>
+                        <span class="field-value">{{ parent()!.person.firstName }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Apellidos</span>
+                        <span class="field-value">{{ parent()!.person.lastName }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Tipo Documento</span>
+                        <span class="field-value">{{ parent()!.person.documentType }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Nro. Documento</span>
+                        <span class="field-value mono">{{ parent()!.person.documentNumber }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Fecha de Nacimiento</span>
+                        <span class="field-value">{{ parent()!.person.birthDate ?? '–' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Género</span>
+                        <span class="field-value">{{ parent()!.person.gender ?? '–' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Celular</span>
+                        <span class="field-value">{{ parent()!.person.mobilePhone ?? '–' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Teléfono</span>
+                        <span class="field-value">{{ parent()!.person.phone ?? '–' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Email</span>
+                        <span class="field-value">{{ parent()!.person.email ?? '–' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Ciudad</span>
+                        <span class="field-value">{{ parent()!.person.city ?? '–' }}</span>
+                    </div>
+                    <div class="detail-field span-2">
+                        <span class="field-label">Dirección</span>
+                        <span class="field-value">{{ parent()!.person.address ?? '–' }}</span>
+                    </div>
+                </div>
+
+                <p-divider align="left">
+                    <small class="text-muted">Datos Laborales</small>
+                </p-divider>
+
+                <div class="detail-grid">
+                    <div class="detail-field">
+                        <span class="field-label">Ocupación</span>
+                        <span class="field-value">{{ parent()!.occupation ?? '–' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Lugar de Trabajo</span>
+                        <span class="field-value">{{ parent()!.workplace ?? '–' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Tel. Trabajo</span>
+                        <span class="field-value">{{ parent()!.workPhone ?? '–' }}</span>
+                    </div>
+                    <div class="detail-field">
+                        <span class="field-label">Responsable Financiero</span>
+                        <p-tag [value]="parent()!.isFinancialResponsible ? 'Sí' : 'No'"
+                            [severity]="parent()!.isFinancialResponsible ? 'success' : 'secondary'" />
+                    </div>
+                </div>
+            </p-tabpanel>
+
+            <!-- ── TAB 2: Estudiantes vinculados ────────────────────────── -->
+            <p-tabpanel value="1">
+                @if (linkedStudents().length === 0) {
+                <div class="empty-tab">
+                    <i class="pi pi-users"></i>
+                    <p>No hay estudiantes vinculados a este tutor</p>
+                </div>
+                } @else {
+                <div class="students-grid">
+                    @for (item of linkedStudents(); track item.student.idStudent) {
+                    <div class="student-card">
+                        <div class="student-card-avatar">
+                            <i class="pi pi-user"></i>
+                        </div>
+                        <div class="student-card-info">
+                            <div class="student-card-name">{{ item.student.fullName }}</div>
+                            <div class="student-card-sub">{{ item.student.enrollmentNumber }}</div>
+                            <div class="student-card-sub">
+                                {{ item.student.gradeName }} – {{ item.student.sectionName }}
+                            </div>
+                        </div>
+                        <div class="student-card-badges">
+                            <p-tag [value]="getRelationshipLabel(item.relation.relationship)" severity="info"
+                                styleClass="mb-1 block text-xs" />
+                            @if (item.relation.isPrimaryContact) {
+                            <p-tag value="Contacto principal" severity="success" styleClass="block text-xs" />
+                            }
+                            @if (item.relation.isAuthorizedPickup) {
+                            <p-tag value="Autorizado retiro" severity="warn" styleClass="block text-xs mt-1" />
+                            }
+                            <p-tag [value]="getStatusLabel(item.student.status)"
+                                [severity]="getStatusSeverity(item.student.status)" styleClass="block text-xs mt-1" />
+                        </div>
+                    </div>
+                    }
+                </div>
+                }
+            </p-tabpanel>
+
+            <!-- ── TAB 3: Historial de Pagos ────────────────────────────── -->
+            <p-tabpanel value="2">
+                @if (payments().length > 0) {
+                <div class="payments-summary">
+                    <div class="summary-item">
+                        <span class="summary-label">Total pagos</span>
+                        <span class="summary-value">{{ payments().length }}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Total pagado</span>
+                        <span class="summary-value success">{{ formatCurrency(totalPaid) }}</span>
+                    </div>
+                </div>
+                }
+
+                <p-table [value]="payments()" styleClass="p-datatable-sm mt-3" [paginator]="payments().length > 8"
+                    [rows]="8">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th>Recibo</th>
+                            <th>Estudiante</th>
+                            <th>Concepto</th>
+                            <th>Fecha</th>
+                            <th class="text-right">Monto</th>
+                            <th>Método</th>
+                            <th class="text-center">Estado</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-payment>
+                        <tr>
+                            <td>
+                                <span class="mono text-sm">{{ payment.receiptNumber }}</span>
+                            </td>
+                            <td>{{ payment.studentName }}</td>
+                            <td>{{ payment.conceptName }}</td>
+                            <td>{{ payment.paymentDate }}</td>
+                            <td class="text-right mono font-semibold">
+                                {{ formatCurrency(payment.amount) }}
+                            </td>
+                            <td>{{ payment.paymentMethodName }}</td>
+                            <td class="text-center">
+                                <p-tag [value]="payment.status === 'COMPLETED' ? 'Completado' : 'Anulado'"
+                                    [severity]="payment.status === 'COMPLETED' ? 'success' : 'danger'" />
+                            </td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted-color">
+                                <i class="pi pi-wallet text-2xl block mb-2"></i>
+                                Sin pagos registrados
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </p-tabpanel>
+
+            <!-- ── TAB 4: Accesos / Retiros ─────────────────────────────── -->
+            <p-tabpanel value="3">
+                <p-table [value]="earlyDepartures()" styleClass="p-datatable-sm mt-3"
+                    [paginator]="earlyDepartures().length > 8" [rows]="8">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th>Estudiante</th>
+                            <th>Fecha y Hora</th>
+                            <th>Autorizado por</th>
+                            <th>Persona que retira</th>
+                            <th>Parentesco</th>
+                            <th>Motivo</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-dep>
+                        <tr>
+                            <td class="font-medium">{{ dep.studentName }}</td>
+                            <td>{{ formatDatetime(dep.departureDatetime) }}</td>
+                            <td>{{ dep.authorizedByStaffName ?? '–' }}</td>
+                            <td>{{ dep.pickupPersonName }}</td>
+                            <td>{{ getRelationshipLabel(dep.pickupPersonRelationship) }}</td>
+                            <td>{{ dep.reason ?? '–' }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted-color">
+                                <i class="pi pi-clock text-2xl block mb-2"></i>
+                                Sin registros de retiro
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </p-tabpanel>
+
+        </p-tabpanels>
+    </p-tabs>
+    }
+</p-dialog>

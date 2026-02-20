@@ -1,0 +1,78 @@
+<!-- src/app/shared/components/access/early-departure-dialog/early-departure-dialog.component.html -->
+<p-dialog header="Registrar Retiro Anticipado" [(visible)]="visible" [modal]="true" [draggable]="false"
+    [resizable]="false" [style]="{ width: '540px', maxWidth: '95vw' }" [closeOnEscape]="true" (onHide)="close()">
+
+    <ng-template pTemplate="header">
+        <div class="dialog-header">
+            <div class="dialog-icon">
+                <i class="pi pi-sign-out"></i>
+            </div>
+            <div>
+                <h3 class="dialog-title">Registrar Retiro Anticipado</h3>
+                <p class="dialog-subtitle">Ingrese los datos de la persona que retira al alumno</p>
+            </div>
+        </div>
+    </ng-template>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="form-body">
+
+        <div class="field">
+            <label>Alumno <span class="req">*</span></label>
+            <p-select formControlName="idStudent" [options]="studentOptions" optionLabel="label" optionValue="value"
+                placeholder="Seleccionar alumno" [filter]="true" filterPlaceholder="Buscar..." [showClear]="true"
+                [class.ng-invalid]="isFieldInvalid('idStudent')" styleClass="w-full" />
+            @if (isFieldInvalid('idStudent')) {
+            <small class="error-msg">Seleccione un alumno</small>
+            }
+        </div>
+
+        <div class="field">
+            <label>Fecha y Hora de Retiro <span class="req">*</span></label>
+            <p-datepicker formControlName="departureTime" [showTime]="true" [showSeconds]="false" dateFormat="dd/mm/yy"
+                [showIcon]="true" placeholder="DD/MM/AAAA HH:MM" />
+        </div>
+
+        <div class="form-grid">
+            <div class="field">
+                <label>Nombre de quien retira <span class="req">*</span></label>
+                <input pInputText formControlName="pickedUpByName" placeholder="Ej: Ana López"
+                    [class.ng-invalid]="isFieldInvalid('pickedUpByName')" />
+                @if (isFieldInvalid('pickedUpByName')) {
+                <small class="error-msg">El nombre es requerido</small>
+                }
+            </div>
+
+            <div class="field">
+                <label>Parentesco <span class="req">*</span></label>
+                <p-select formControlName="pickedUpByRelationship" [options]="relationshipOptions" optionLabel="label"
+                    optionValue="value" placeholder="Seleccionar"
+                    [class.ng-invalid]="isFieldInvalid('pickedUpByRelationship')" styleClass="w-full" />
+                @if (isFieldInvalid('pickedUpByRelationship')) {
+                <small class="error-msg">El parentesco es requerido</small>
+                }
+            </div>
+        </div>
+
+        <div class="field">
+            <label>Autorizado por (Personal)</label>
+            <p-select formControlName="authorizedByStaffId" [options]="staffOptions" optionLabel="label"
+                optionValue="value" placeholder="Opcional — empleado que autoriza" [filter]="true"
+                filterPlaceholder="Buscar..." [showClear]="true" styleClass="w-full" />
+        </div>
+
+        <div class="field">
+            <label>Motivo</label>
+            <textarea pTextarea formControlName="reason" rows="2" placeholder="Cita médica, emergencia familiar, etc."
+                class="w-full resize-none">
+            </textarea>
+        </div>
+    </form>
+
+    <ng-template pTemplate="footer">
+        <div class="dialog-footer">
+            <p-button label="Cancelar" icon="pi pi-times" severity="secondary" [text]="true" (onClick)="close()" />
+            <p-button label="Registrar Retiro" icon="pi pi-sign-out" severity="warn" [loading]="loading()"
+                (onClick)="onSubmit()" />
+        </div>
+    </ng-template>
+</p-dialog>

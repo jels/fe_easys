@@ -1,0 +1,171 @@
+// src/app/shared/components/student/student-detail-dialog/student-detail-dialog.component.scss
+
+// ── Dialog Header ─────────────────────────────────────────────────────────────
+.dialog-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.dialog-header-skeleton {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+}
+
+.student-avatar-lg {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--primary-50, rgba(59, 130, 246, 0.1));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    i {
+        font-size: 1.5rem;
+        color: var(--primary-color);
+    }
+}
+
+.dialog-header-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.dialog-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--surface-900);
+    margin: 0 0 0.3rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dialog-header-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.enrollment-code {
+    font-family: 'Courier New', monospace;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    background: var(--primary-50, rgba(59, 130, 246, 0.08));
+    padding: 0.1rem 0.4rem;
+    border-radius: 0.25rem;
+}
+
+.grade-chip {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6366f1;
+    background: rgba(99, 102, 241, 0.1);
+    padding: 0.15rem 0.5rem;
+    border-radius: 0.4rem;
+}
+
+// ── Detail Grid ───────────────────────────────────────────────────────────────
+.detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1.25rem 1.5rem;
+    padding-top: 1rem;
+}
+
+.detail-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    &.span-2 {
+        grid-column: span 2;
+    }
+    &.span-3 {
+        grid-column: span 3;
+    }
+}
+
+.field-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-color-secondary);
+}
+
+.field-value {
+    font-size: 0.9rem;
+    color: var(--text-color);
+    &.mono {
+        font-family: 'Courier New', monospace;
+    }
+}
+
+// ── Score Badge ───────────────────────────────────────────────────────────────
+.score-badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 0.35rem;
+    font-weight: 700;
+    font-size: 0.85rem;
+    font-family: 'Courier New', monospace;
+}
+
+.score-ok {
+    background: rgba(34, 197, 94, 0.12);
+    color: #16a34a;
+}
+.score-low {
+    background: rgba(239, 68, 68, 0.12);
+    color: #dc2626;
+}
+
+.subject-code {
+    font-size: 0.72rem;
+    color: var(--text-color-secondary);
+    font-family: 'Courier New', monospace;
+}
+
+.mono {
+    font-family: 'Courier New', monospace;
+}
+
+.text-muted {
+    color: var(--text-color-secondary);
+    font-size: 0.8rem;
+}
+
+// ── Responsive ────────────────────────────────────────────────────────────────
+@media (max-width: 768px) {
+    .detail-grid {
+        grid-template-columns: 1fr 1fr;
+        .span-2,
+        .span-3 {
+            grid-column: span 2;
+        }
+    }
+    .student-avatar-lg {
+        width: 42px;
+        height: 42px;
+    }
+    .dialog-title {
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .detail-grid {
+        grid-template-columns: 1fr;
+        .span-2,
+        .span-3 {
+            grid-column: span 1;
+        }
+    }
+}
