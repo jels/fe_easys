@@ -71,7 +71,7 @@
 
     <!-- Main Tabs -->
     <div class="tabs-card">
-        <p-tabs [value]="activeTab()" (valueChange)="activeTab.set($event?.toString()  ?? '0')">
+        <p-tabs [value]="activeTab()" (valueChange)="onTabChange($event?.toString() ?? '0')">
             <p-tablist>
                 <p-tab value="0">
                     <i class="pi pi-users mr-1"></i>
@@ -106,6 +106,13 @@
                     Infracciones
                     @if (infractions().length) {
                     <span class="tab-badge tab-badge-red">{{ infractions().length }}</span>
+                    }
+                </p-tab>
+                <p-tab value="5">
+                    <i class="pi pi-qrcode mr-1"></i>
+                    Escáner QR
+                    @if (qrScanCount()) {
+                    <span class="tab-badge tab-badge-green">{{ qrScanCount() }}</span>
                     }
                 </p-tab>
             </p-tablist>
@@ -450,6 +457,150 @@
                             </tr>
                         </ng-template>
                     </p-table>
+                </p-tabpanel>
+
+
+                <!-- ── TAB 6: Escáner QR ─────────────────────────────────── -->
+                <p-tabpanel value="5">
+                    <div class="qr-layout">
+
+                        <!-- ── Panel cámara ──────────────────────────────── -->
+                        <div class="qr-cam-panel">
+
+                            <!-- Selector de modo -->
+                            <div class="qr-mode-bar">
+                                <button class="qr-mode-btn" [class.qr-mode-active-entrada]="qrScanMode() === 'ENTRADA'"
+                                    (click)="setQrMode('ENTRADA')">
+                                    <span class="qr-dot" style="background:#22c55e"></span>
+                                    Registrar Entrada
+                                </button>
+                                <button class="qr-mode-btn" [class.qr-mode-active-retiro]="qrScanMode() === 'RETIRO'"
+                                    (click)="setQrMode('RETIRO')">
+                                    <span class="qr-dot" style="background:#f59e0b"></span>
+                                    Registrar Retiro
+                                </button>
+                                <button class="qr-mode-btn" [class.qr-mode-active-salida]="qrScanMode() === 'SALIDA'"
+                                    (click)="setQrMode('SALIDA')">
+                                    <span class="qr-dot" style="background:#ef4444"></span>
+                                    Registrar Salida
+                                </button>
+                            </div>
+
+                            <!-- Viewport cámara -->
+                            <div class="qr-viewport" [class.qr-flash-ok]="qrFlashOk()"
+                                [class.qr-flash-err]="qrFlashErr()" [style.--mode-color]="getQrModeColor(qrScanMode())">
+
+                                <!-- Sin cámara -->
+                                @if (!qrHasCamera()) {
+                                <div class="qr-no-cam">
+                                    <i class="pi pi-camera"></i>
+                                    <p>No se detectó cámara</p>
+                                    <small>Revisá los permisos del navegador</small>
+                                </div>
+                                }
+
+                                <!-- Scanner ZXing -->
+                                <zxing-scanner [enable]="qrScannerActive()" [device]="qrSelectedCamera()"
+                                    [formats]="qrFormats" (camerasFound)="onQrCamerasFound($event)"
+                                    (camerasNotFound)="onQrCamerasNotFound()" (scanSuccess)="onQrCodeScanned($event)"
+                                    (scanError)="onQrScanError($event)" style="width:100%;height:100%;display:block">
+                                </zxing-scanner>
+
+                                <!-- Marco QR animado -->
+                                <div class="qr-frame">
+                                    <span class="qr-corner tl"></span>
+                                    <span class="qr-corner tr"></span>
+                                    <span class="qr-corner bl"></span>
+                                    <span class="qr-corner br"></span>
+                                    <span class="qr-scan-line"></span>
+                                </div>
+
+                                <!-- Hint inferior -->
+                                <div class="qr-hint">
+                                    Apuntá al código QR del carnet
+                                    · Modo: <strong>{{ getQrModeLabel(qrScanMode()) }}</strong>
+                                </div>
+                            </div>
+
+                            <!-- Feedback del último escaneo -->
+                            @if (qrScanResult(); as res) {
+                            <div class="qr-feedback" [class.qr-ok]="res.success" [class.qr-err]="!res.success">
+                                <span class="qr-fb-icon">{{ res.success ? '✅' : '❌' }}</span>
+                                <div class="qr-fb-body">
+                                    <div class="qr-fb-name">
+                                        {{ res.success ? res.person?.fullName : 'QR no reconocido' }}
+                                    </div>
+                                    @if (res.success && res.person?.displayLabel) {
+                                    <div class="qr-fb-grade">{{ res.person?.displayLabel }}</div>
+                                    }
+                                    <div class="qr-fb-mode">
+                                        <span class="qr-mode-pill" [style.background]="getQrModeColor(qrScanMode())">
+                                            {{ getQrModeLabel(qrScanMode()) }}
+                                        </span>
+                                        {{ res.message }}
+                                    </div>
+                                </div>
+                            </div>
+                            }
+
+                            <!-- Barra inferior: stats + acciones -->
+                            <div class="qr-bottom-bar">
+                                <div class="qr-session-info">
+                                    <span class="qr-session-num">{{ qrScanCount() }}</span>
+                                    <span class="qr-session-lbl">registros en esta sesión</span>
+                                </div>
+                                <div class="qr-bottom-actions">
+                                    <button pButton icon="pi pi-trash" label="Limpiar log"
+                                        class="p-button-outlined p-button-sm p-button-secondary"
+                                        [disabled]="qrScanLog().length === 0" (click)="clearQrLog()">
+                                    </button>
+                                    <button pButton icon="pi pi-pencil" label="Registro manual"
+                                        class="p-button-outlined p-button-sm" (click)="openAccessStudent()">
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ── Panel log de sesión ────────────────────────── -->
+                        <div class="qr-log-panel">
+                            <div class="qr-log-header">
+                                <i class="pi pi-list"></i>
+                                <span>Registros de la sesión</span>
+                                @if (qrScanLog().length) {
+                                <span class="qr-log-count">{{ qrScanLog().length }}</span>
+                                }
+                            </div>
+
+                            @if (qrScanLog().length === 0) {
+                            <div class="qr-log-empty">
+                                <i class="pi pi-qrcode"></i>
+                                <p>Escaneá un carnet para comenzar</p>
+                            </div>
+                            } @else {
+                            <div class="qr-log-list">
+                                @for (item of qrScanLog(); track $index) {
+                                <div class="qr-log-item" [class.log-ok]="item.success" [class.log-err]="!item.success">
+                                    <div class="log-icon-wrap" [style.background]="getQrModeColor(item.mode) + '22'">
+                                        <i class="pi" [class.pi-check]="item.success" [class.pi-times]="!item.success"
+                                            [style.color]="item.success ? getQrModeColor(item.mode) : '#ef4444'"></i>
+                                    </div>
+                                    <div class="log-info">
+                                        <div class="log-name">{{ item.name }}</div>
+                                        <div class="log-grade">{{ item.grade }}</div>
+                                    </div>
+                                    <div class="log-right">
+                                        <span class="log-mode-pill" [style.background]="getQrModeColor(item.mode)">
+                                            {{ getQrModeLabel(item.mode) }}
+                                        </span>
+                                        <span class="log-time">{{ item.time }}</span>
+                                    </div>
+                                </div>
+                                }
+                            </div>
+                            }
+                        </div>
+
+                    </div><!-- /qr-layout -->
                 </p-tabpanel>
 
             </p-tabpanels>

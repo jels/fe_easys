@@ -17,6 +17,9 @@ import {
 } from '../../../shared/data/operations.mock';
 
 import { MOCK_STUDENTS } from '../../../shared/data/people.mock';
+
+import { QrAccessLogMock } from '../../../shared/data/qr-access.mock';
+import { QrAccessService } from './qr-access.service';
 import { MOCK_STAFF } from '../../../shared/data/staff.mock';
 
 export interface AccessFilter {
@@ -75,21 +78,114 @@ export class AccessControlService {
     private nextInfId = 100;
     private nextDepId = 100;
 
+    constructor(private qrService: QrAccessService) {}
+
     private todayStr(): string {
         return new Date().toISOString().split('T')[0];
+    }
+
+    // ── Convertir QrLog → StudentAccessLogMock ────────────────────────────────
+    // Agrupa los QR logs por persona y construye una entrada/salida consolidada
+    private qrLogsToStudentLogs(): StudentAccessLogMock[] {
+        const qrLogs = this.qrService.getTodayQrLogs().filter((l) => l.personType === 'STUDENT');
+
+        // Agrupar por idPerson para consolidar entrada/salida/retiro del día
+        const byPerson = new Map<number, QrAccessLogMock[]>();
+        for (const log of qrLogs) {
+            if (!byPerson.has(log.idPerson)) byPerson.set(log.idPerson, []);
+            byPerson.get(log.idPerson)!.push(log);
+        }
+
+        const today = this.todayStr();
+        const result: StudentAccessLogMock[] = [];
+        let syntheticId = 9000;
+
+        for (const [idPerson, logs] of byPerson) {
+            const sorted = [...logs].sort((a, b) => a.registeredAt.localeCompare(b.registeredAt));
+            const entrada = sorted.find((l) => l.mode === 'ENTRADA');
+            const salida = sorted.find((l) => l.mode === 'SALIDA');
+            const retiro = sorted.find((l) => l.mode === 'RETIRO');
+
+            if (!entrada) continue; // sin entrada no aparece en la lista
+
+            result.push({
+                idStudentAccessLog: syntheticId++,
+                idStudent: idPerson,
+                studentName: logs[0].fullName,
+                gradeName: logs[0].gradeName ?? '',
+                sectionName: '',
+                accessDate: today,
+                entryTime: entrada.registeredAt,
+                exitTime: salida?.registeredAt ?? retiro?.registeredAt,
+                isLate: false,
+                isAbsent: false,
+                absenceJustified: false,
+                observations: retiro ? 'Retiro anticipado vía QR' : salida ? 'Salida vía QR' : 'Entrada vía QR',
+                registeredByName: 'Sistema QR',
+                isActive: true
+            });
+        }
+        return result;
+    }
+
+    private qrLogsToStaffLogs(): StaffAccessLogMock[] {
+        const qrLogs = this.qrService.getTodayQrLogs().filter((l) => l.personType === 'STAFF');
+
+        const byPerson = new Map<number, QrAccessLogMock[]>();
+        for (const log of qrLogs) {
+            if (!byPerson.has(log.idPerson)) byPerson.set(log.idPerson, []);
+            byPerson.get(log.idPerson)!.push(log);
+        }
+
+        const today = this.todayStr();
+        const result: StaffAccessLogMock[] = [];
+        let syntheticId = 9000;
+
+        for (const [idPerson, logs] of byPerson) {
+            const sorted = [...logs].sort((a, b) => a.registeredAt.localeCompare(b.registeredAt));
+            const entrada = sorted.find((l) => l.mode === 'ENTRADA');
+            const salida = sorted.find((l) => l.mode === 'SALIDA');
+            if (!entrada) continue;
+
+            const staffMock = MOCK_STAFF.find((s) => s.idStaff === idPerson);
+            result.push({
+                idStaffAccessLog: syntheticId++,
+                idStaff: idPerson,
+                staffName: logs[0].fullName,
+                staffType: staffMock?.staffType ?? 'TEACHER',
+                accessDate: today,
+                entryTime: entrada.registeredAt,
+                exitTime: salida?.registeredAt,
+                isLate: false,
+                observations: 'Registro vía QR',
+                isActive: true
+            });
+        }
+        return result;
     }
 
     // ── Estudiantes ───────────────────────────────────────────────────────────
 
     getStudentLogs(filters?: AccessFilter): Observable<StudentAccessLogMock[]> {
-        let result = this._studentLogs();
+        // Combinar logs manuales + logs QR (QR solo agrega si no hay manual para esa persona/fecha)
+        const manual = this._studentLogs();
+        const qr = this.qrLogsToStudentLogs();
+        const manualKeys = new Set(manual.map((l) => `${l.idStudent}-${l.accessDate}`));
+        let result = [...manual, ...qr.filter((l) => !manualKeys.has(`${l.idStudent}-${l.accessDate}`))];
+
         if (filters?.date) result = result.filter((l) => l.accessDate === filters.date);
         if (filters?.idStudent) result = result.filter((l) => l.idStudent === filters.idStudent);
         if (filters?.search) {
             const q = filters.search.toLowerCase();
             result = result.filter((l) => (l.studentName ?? '').toLowerCase().includes(q));
         }
-        return of([...result].sort((a, b) => b.accessDate.localeCompare(a.accessDate))).pipe(delay(this.DELAY_MS));
+        return of(
+            [...result].sort((a, b) => {
+                const tA = a.entryTime ?? a.accessDate;
+                const tB = b.entryTime ?? b.accessDate;
+                return tB.localeCompare(tA);
+            })
+        ).pipe(delay(this.DELAY_MS));
     }
 
     getTodayStudentLogs(): Observable<StudentAccessLogMock[]> {
@@ -123,14 +219,24 @@ export class AccessControlService {
     // ── Personal (Staff) ──────────────────────────────────────────────────────
 
     getStaffLogs(filters?: AccessFilter): Observable<StaffAccessLogMock[]> {
-        let result = this._staffLogs();
+        const manual = this._staffLogs();
+        const qr = this.qrLogsToStaffLogs();
+        const manualKeys = new Set(manual.map((l) => `${l.idStaff}-${l.accessDate}`));
+        let result = [...manual, ...qr.filter((l) => !manualKeys.has(`${l.idStaff}-${l.accessDate}`))];
+
         if (filters?.date) result = result.filter((l) => l.accessDate === filters.date);
         if (filters?.idStaff) result = result.filter((l) => l.idStaff === filters.idStaff);
         if (filters?.search) {
             const q = filters.search.toLowerCase();
             result = result.filter((l) => (l.staffName ?? '').toLowerCase().includes(q));
         }
-        return of([...result].sort((a, b) => b.accessDate.localeCompare(a.accessDate))).pipe(delay(this.DELAY_MS));
+        return of(
+            [...result].sort((a, b) => {
+                const tA = a.entryTime ?? a.accessDate;
+                const tB = b.entryTime ?? b.accessDate;
+                return tB.localeCompare(tA);
+            })
+        ).pipe(delay(this.DELAY_MS));
     }
 
     getTodayStaffLogs(): Observable<StaffAccessLogMock[]> {
@@ -138,7 +244,7 @@ export class AccessControlService {
     }
 
     registerStaffAccess(req: AccessLogRequest): Observable<StaffAccessLogMock> {
-        const staff = MOCK_STAFF.find((s: { idStaff: number | undefined }) => s.idStaff === req.idStaff);
+        const staff = MOCK_STAFF.find((s) => s.idStaff === req.idStaff);
         const newLog: StaffAccessLogMock = {
             idStaffAccessLog: this.nextLogId++,
             idStaff: req.idStaff!,
@@ -174,7 +280,7 @@ export class AccessControlService {
 
     registerEarlyDeparture(req: EarlyDepartureRequest): Observable<EarlyDepartureMock> {
         const student = MOCK_STUDENTS.find((s) => s.idStudent === req.idStudent);
-        const authorizer = req.authorizedByStaffId ? MOCK_STAFF.find((s: { idStaff: number | undefined }) => s.idStaff === req.authorizedByStaffId) : undefined;
+        const authorizer = req.authorizedByStaffId ? MOCK_STAFF.find((s) => s.idStaff === req.authorizedByStaffId) : undefined;
 
         const newDep: EarlyDepartureMock = {
             idEarlyDeparture: this.nextDepId++,
@@ -217,7 +323,7 @@ export class AccessControlService {
     registerInfraction(req: InfractionRequest): Observable<StudentInfractionMock> {
         const student = MOCK_STUDENTS.find((s) => s.idStudent === req.idStudent);
         const infType = MOCK_INFRACTION_TYPES.find((t) => t.idInfractionType === req.idInfractionType);
-        const reporter = req.idReportedByStaff ? MOCK_STAFF.find((s: { idStaff: number | undefined }) => s.idStaff === req.idReportedByStaff) : undefined;
+        const reporter = req.idReportedByStaff ? MOCK_STAFF.find((s) => s.idStaff === req.idReportedByStaff) : undefined;
 
         const newInf: StudentInfractionMock = {
             idStudentInfraction: this.nextInfId++,
@@ -253,18 +359,24 @@ export class AccessControlService {
         infractionsPending: number;
     }> {
         const today = this.todayStr();
-        const stuLogs = this._studentLogs().filter((l) => l.accessDate === today);
-        const stfLogs = this._staffLogs().filter((l) => l.accessDate === today);
+        // Combinar manuales + QR para las stats
+        const qrStu = this.qrLogsToStudentLogs();
+        const qrStf = this.qrLogsToStaffLogs();
+        const manualStu = this._studentLogs().filter((l) => l.accessDate === today);
+        const manualStf = this._staffLogs().filter((l) => l.accessDate === today);
+        const manualKeys = new Set(manualStu.map((l) => l.idStudent));
+        const stuLogs = [...manualStu, ...qrStu.filter((l) => !manualKeys.has(l.idStudent))];
+        const stfKeys = new Set(manualStf.map((l) => l.idStaff));
+        const stfLogs = [...manualStf, ...qrStf.filter((l) => !stfKeys.has(l.idStaff))];
         const deps = this._earlyDeps().filter((l) => l.departureDatetime.startsWith(today));
 
         return of({
             studentsPresentToday: stuLogs.filter((l) => !l.isAbsent).length,
             studentsAbsentToday: stuLogs.filter((l) => l.isAbsent).length,
             studentsLateToday: stuLogs.filter((l) => l.isLate).length,
-            staffPresentToday: stfLogs.filter((l) => l.isActive).length,
-            staffAbsentToday: stfLogs.filter((l) => !l.isActive).length,
+            staffPresentToday: stfLogs.filter((l) => l.isActive !== false).length,
+            staffAbsentToday: stfLogs.filter((l) => l.isActive === false).length,
             earlyDeparturesToday: deps.length,
-            // isActive === false significa resuelta/archivada
             infractionsPending: this._infractions().filter((i) => i.isActive).length
         }).pipe(delay(this.DELAY_MS));
     }

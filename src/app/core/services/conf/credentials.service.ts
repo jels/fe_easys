@@ -5,8 +5,8 @@ import { delay } from 'rxjs/operators';
 
 import { MOCK_STUDENTS } from '../../../shared/data/people.mock';
 import { MOCK_STAFF } from '../../../shared/data/staff.mock';
+import { MOCK_FILES, FileMock } from '../../../shared/data/files.mock';
 import { MOCK_SCHOOL_YEARS } from '../../../shared/data/academic.mock';
-import { MOCK_FILES } from '../../../shared/data/files.mock';
 
 export type CredentialPersonType = 'STUDENT' | 'STAFF';
 
@@ -36,7 +36,34 @@ export class CredentialsService {
     private _staffTokens = new Map<number, { token: string; issuedAt: string }>();
 
     constructor() {
-        // Pre-cargar tokens existentes del mock (si tuvieran)
+        // ── Tokens demo pre-cargados ──────────────────────────────────────────
+        // Permiten probar el escáner QR sin necesidad de generar credenciales primero.
+        // Formato: STU-<id_hex>-<ts_hex>-<rand>
+        // Estos tokens coinciden con los QR que se mostrarán en la vista de credenciales
+        // al abrir la app por primera vez.
+        const DEMO_STUDENT_TOKENS: { id: number; token: string }[] = [
+            { id: 1, token: 'STU-000001-demo0001-a1b2' },
+            { id: 2, token: 'STU-000002-demo0001-c3d4' },
+            { id: 3, token: 'STU-000003-demo0001-e5f6' },
+            { id: 4, token: 'STU-000004-demo0001-g7h8' },
+            { id: 5, token: 'STU-000005-demo0001-i9j0' },
+            { id: 6, token: 'STU-000006-demo0001-k1l2' },
+            { id: 7, token: 'STU-000007-demo0001-m3n4' },
+            { id: 8, token: 'STU-000008-demo0001-o5p6' }
+        ];
+        const DEMO_STAFF_TOKENS: { id: number; token: string }[] = [
+            { id: 1, token: 'STA-000001-demo0001-q7r8' },
+            { id: 2, token: 'STA-000002-demo0001-s9t0' },
+            { id: 3, token: 'STA-000003-demo0001-u1v2' },
+            { id: 4, token: 'STA-000004-demo0001-w3x4' },
+            { id: 5, token: 'STA-000005-demo0001-y5z6' }
+        ];
+        const demoDate = '2025-02-01T08:00:00.000Z';
+
+        DEMO_STUDENT_TOKENS.forEach((d) => this._studentTokens.set(d.id, { token: d.token, issuedAt: demoDate }));
+        DEMO_STAFF_TOKENS.forEach((d) => this._staffTokens.set(d.id, { token: d.token, issuedAt: demoDate }));
+
+        // También cargar tokens personalizados si los mocks los traen definidos
         MOCK_STUDENTS.forEach((s) => {
             if ((s as any).accessToken) {
                 this._studentTokens.set(s.idStudent, {
@@ -116,7 +143,7 @@ export class CredentialsService {
                 accessToken: newToken,
                 credentialIssuedAt: issuedAt
             },
-            institution: 'Colegio Adventista de Asuncion',
+            institution: 'Colegio San José',
             activeYear,
             accessToken: newToken,
             isNew: true
@@ -134,7 +161,7 @@ export class CredentialsService {
         const activeYear = MOCK_SCHOOL_YEARS.find((y) => y.isActive)?.name ?? 'Año Lectivo 2025';
         return of({
             person: { ...person, accessToken: tokenData.token, credentialIssuedAt: tokenData.issuedAt },
-            institution: 'Colegio Adventista de Asuncion',
+            institution: 'Colegio San José',
             activeYear,
             accessToken: tokenData.token,
             isNew: false

@@ -11,11 +11,12 @@ import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { QRCodeComponent } from 'angularx-qrcode';
 import { Subject } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { Subject as RxSubject } from 'rxjs';
-import { QRCodeComponent } from 'angularx-qrcode';
-import { CredentialData, CredentialPerson, CredentialPersonType, CredentialsService } from '../../core/services/conf/credentials.service';
+
+import { CredentialsService, CredentialPerson, CredentialData, CredentialPersonType } from '../../core/services/conf/credentials.service';
 
 @Component({
     selector: 'app-credentials',
@@ -106,6 +107,7 @@ export class CredentialsComponent implements OnInit, OnDestroy {
                 .subscribe((cd) => {
                     this.credentialData.set(cd);
                     this.loadingCred.set(false);
+                    this.printReady.set(!!cd);
                 });
         }
     }
