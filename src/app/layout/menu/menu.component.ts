@@ -48,6 +48,11 @@ export class MenuComponent {
                                 label: 'Accesos',
                                 icon: 'pi pi-fw pi-sign-in',
                                 routerLink: '/sys/access'
+                            },
+                            {
+                                label: 'Credenciales',
+                                icon: 'pi pi-fw pi-sign-in',
+                                routerLink: '/sys/credentials'
                             }
                             // {
                             //     label: 'Registrar Salida',

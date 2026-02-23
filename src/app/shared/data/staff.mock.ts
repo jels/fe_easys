@@ -20,6 +20,8 @@ export interface StaffMock {
     createdAt: string;
     person: any;
     fullName: string;
+    accessToken?: string;
+    credentialIssuedAt?: string;
 }
 
 export const MOCK_STAFF: StaffMock[] = [

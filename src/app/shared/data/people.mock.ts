@@ -43,6 +43,8 @@ export interface StudentMock {
     updatedAt: string;
     person: PersonMock;
     fullName: string;
+    accessToken?: string;
+    credentialIssuedAt?: string;
 }
 
 export interface ParentMock {

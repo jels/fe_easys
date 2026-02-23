@@ -39,7 +39,7 @@ export interface SystemParamMock {
 export const MOCK_COMPANY: CompanyMock = {
     idCompany: 1,
     name: 'Institución Educativa San José',
-    tradeName: 'Colegio San José',
+    tradeName: 'Colegio Adventista de Asuncion',
     ruc: '80012345-1',
     address: 'Av. Mcal. López 1234, Asunción',
     phone: '021-550000',

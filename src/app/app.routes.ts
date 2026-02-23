@@ -58,6 +58,10 @@ export const routes: Routes = [
             {
                 path: 'notifications',
                 loadChildren: () => import('./modules/notifications/notifications.routes').then((r) => r.notificationsRoutes)
+            },
+            {
+                path: 'credentials',
+                loadChildren: () => import('./modules/credentials/credentials.routes').then((r) => r.credentialsRoutes)
             }
         ]
     },

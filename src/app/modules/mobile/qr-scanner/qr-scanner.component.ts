@@ -114,7 +114,7 @@ export class QrScannerComponent implements OnInit, OnDestroy {
             visible: true,
             success: result.success,
             name: result.person?.fullName ?? 'QR desconocido',
-            grade: result.person?.gradeName ?? (result.person?.personType === 'STAFF' ? 'Personal' : ''),
+            grade: result.person?.displayLabel ?? (result.person?.personType === 'STAFF' ? 'Personal' : ''),
             message: result.message,
             type: result.person?.personType === 'STAFF' ? 'Personal' : 'Alumno'
         });
