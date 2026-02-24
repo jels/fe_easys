@@ -27,6 +27,9 @@
         <button class="mode-btn" [class.active]="mode() === 'SALIDA'" (click)="setMode('SALIDA')">
             <span>🔴</span> Salida
         </button>
+        <button class="mode-btn" (click)="startNfcScan()">
+            <span>🔴</span> NFC
+        </button>
     </div>
 
     <!-- Scanner -->
