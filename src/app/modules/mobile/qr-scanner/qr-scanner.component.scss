@@ -37,7 +37,6 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    line-height: 1;
     &:active {
         background: rgba(255, 255, 255, 0.15);
     }
@@ -54,7 +53,6 @@
     font-size: 1rem;
     font-weight: 700;
 }
-
 .scan-counter {
     display: flex;
     flex-direction: column;
@@ -76,7 +74,7 @@
     letter-spacing: 0.05em;
 }
 
-// ── Mode Selector ─────────────────────────────────────────────────────────────
+// ── Selector modo de acceso ───────────────────────────────────────────────────
 .mode-selector {
     display: flex;
     gap: 0.4rem;
@@ -105,29 +103,71 @@
         border-color: var(--mode-color);
         font-weight: 800;
     }
-    span {
-        font-size: 0.9rem;
-    }
 }
 
-// ── Viewport ──────────────────────────────────────────────────────────────────
+// ── Selector QR / NFC ─────────────────────────────────────────────────────────
+.read-mode-selector {
+    display: flex;
+    gap: 0;
+    flex-shrink: 0;
+    background: rgba(0, 0, 0, 0.6);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.read-mode-btn {
+    flex: 1;
+    padding: 0.6rem 0.5rem;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+    transition: all 0.2s;
+    position: relative;
+
+    &.active {
+        color: var(--mode-color);
+        border-bottom-color: var(--mode-color);
+        background: rgba(255, 255, 255, 0.03);
+    }
+    &.unsupported {
+        opacity: 0.35;
+        cursor: not-allowed;
+    }
+    &:active:not([disabled]) {
+        background: rgba(255, 255, 255, 0.06);
+    }
+}
+.read-mode-icon {
+    font-size: 1.3rem;
+    line-height: 1;
+}
+.read-mode-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}
+.read-mode-unavail {
+    font-size: 0.58rem;
+    color: rgba(255, 255, 255, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+// ── Viewport QR ───────────────────────────────────────────────────────────────
 .scanner-viewport {
     flex: 1;
     position: relative;
     overflow: hidden;
     background: #000;
     min-height: 0;
-    transition: background 0.1s;
     &.flash-green {
         animation: flashGreen 0.6s ease-out;
-    }
-}
-@keyframes flashGreen {
-    0% {
-        box-shadow: inset 0 0 0 8px rgba(34, 197, 94, 0.8);
-    }
-    100% {
-        box-shadow: inset 0 0 0 0 rgba(34, 197, 94, 0);
     }
 }
 
@@ -153,7 +193,6 @@
     font-size: 0.8rem;
 }
 
-// Scanner fill
 zxing-scanner {
     display: block;
     width: 100%;
@@ -165,7 +204,6 @@ zxing-scanner {
     }
 }
 
-// ── Scan Frame ────────────────────────────────────────────────────────────────
 .scan-frame {
     position: absolute;
     top: 50%;
@@ -247,6 +285,158 @@ zxing-scanner {
     }
 }
 
+// ── Viewport NFC ──────────────────────────────────────────────────────────────
+.nfc-viewport {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    background: radial-gradient(ellipse at center, #0d1f2d 0%, #0f0f0f 70%);
+    position: relative;
+    overflow: hidden;
+
+    &.flash-green {
+        animation: flashGreen 0.6s ease-out;
+    }
+    &.nfc-active .nfc-wave {
+        animation-play-state: running;
+    }
+    &:not(.nfc-active) .nfc-wave {
+        animation-play-state: paused;
+        opacity: 0.2;
+    }
+}
+
+// Ondas animadas
+.nfc-waves {
+    position: relative;
+    width: 160px;
+    height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.nfc-wave {
+    position: absolute;
+    border-radius: 50%;
+    border: 2px solid var(--mode-color);
+    animation: nfcPulse 2.4s ease-out infinite;
+    animation-play-state: paused;
+}
+.wave-1 {
+    width: 80px;
+    height: 80px;
+    animation-delay: 0s;
+}
+.wave-2 {
+    width: 120px;
+    height: 120px;
+    animation-delay: 0.6s;
+}
+.wave-3 {
+    width: 160px;
+    height: 160px;
+    animation-delay: 1.2s;
+}
+
+@keyframes nfcPulse {
+    0% {
+        opacity: 0.8;
+        transform: scale(0.8);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(1.1);
+    }
+}
+
+.nfc-icon {
+    position: relative;
+    z-index: 2;
+    font-size: 3rem;
+    line-height: 1;
+    filter: drop-shadow(0 0 12px var(--mode-color));
+}
+
+// Estado
+.nfc-status {
+    text-align: center;
+}
+.nfc-status-text {
+    font-size: 0.88rem;
+    font-weight: 600;
+    padding: 0.5rem 1.25rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    &.active {
+        background: rgba(34, 197, 94, 0.12);
+        color: #4ade80;
+        border: 1px solid rgba(34, 197, 94, 0.25);
+    }
+    &.error {
+        background: rgba(239, 68, 68, 0.12);
+        color: #f87171;
+        border: 1px solid rgba(239, 68, 68, 0.25);
+    }
+    &.waiting {
+        background: rgba(255, 255, 255, 0.06);
+        color: rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+}
+
+// Punto pulsante
+.nfc-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4ade80;
+    animation: dotPulse 1.2s ease-in-out infinite;
+}
+@keyframes dotPulse {
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.4;
+        transform: scale(0.7);
+    }
+}
+
+.btn-retry-nfc {
+    padding: 0.65rem 1.5rem;
+    border-radius: 0.65rem;
+    border: none;
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    transition: background 0.2s;
+    &:active {
+        background: rgba(255, 255, 255, 0.15);
+    }
+}
+
+// ── Flash ──────────────────────────────────────────────────────────────────────
+@keyframes flashGreen {
+    0% {
+        box-shadow: inset 0 0 0 8px rgba(34, 197, 94, 0.8);
+    }
+    100% {
+        box-shadow: inset 0 0 0 0 rgba(34, 197, 94, 0);
+    }
+}
+
 // ── Feedback Overlay ──────────────────────────────────────────────────────────
 .feedback-overlay {
     position: absolute;
@@ -281,8 +471,31 @@ zxing-scanner {
         opacity: 1;
     }
 }
+.feedback-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.15rem;
+}
 .feedback-icon {
     font-size: 2rem;
+}
+.feedback-source-badge {
+    font-size: 0.68rem;
+    font-weight: 800;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    letter-spacing: 0.04em;
+    &.badge-nfc {
+        background: rgba(56, 189, 248, 0.2);
+        color: #38bdf8;
+        border: 1px solid rgba(56, 189, 248, 0.35);
+    }
+    &.badge-qr {
+        background: rgba(168, 85, 247, 0.2);
+        color: #c084fc;
+        border: 1px solid rgba(168, 85, 247, 0.35);
+    }
 }
 .feedback-name {
     font-size: 1.15rem;
@@ -343,6 +556,18 @@ zxing-scanner {
 }
 .log-name {
     flex: 1;
+}
+.log-source {
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 0.05rem 0.35rem;
+    border-radius: 999px;
+    background: rgba(168, 85, 247, 0.15);
+    color: #c084fc;
+    &.source-nfc {
+        background: rgba(56, 189, 248, 0.15);
+        color: #38bdf8;
+    }
 }
 .log-time {
     font-family: monospace;
