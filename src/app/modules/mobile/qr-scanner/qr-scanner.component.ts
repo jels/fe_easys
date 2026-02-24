@@ -30,6 +30,10 @@ export class QrScannerComponent implements OnInit, OnDestroy {
     modeLabel = signal('Registrar Entrada');
     modeColor = signal('#22c55e');
 
+    nfcSupported = 'NDEFReader' in window;
+    nfcActive = signal(false);
+    private nfcController: AbortController | null = null;
+
     // Scanner
     scannerEnabled = signal(true);
     hasCamera = signal(false);
@@ -164,5 +168,95 @@ export class QrScannerComponent implements OnInit, OnDestroy {
 
     get currentConfig() {
         return this.modeConfig[this.mode()];
+    }
+
+    async startNfcScan(): Promise<void> {
+        if (!this.nfcSupported) {
+            this.feedback.set({
+                visible: true,
+                success: false,
+                name: 'NFC',
+                grade: '',
+                message: 'NFC no disponible',
+                type: ''
+            });
+            // Auto-ocultar feedback después de 2.5s
+            this.feedbackTimer = setTimeout(() => {
+                this.feedback.update((f) => ({ ...f, visible: false }));
+            }, 2500);
+            // this.messageService.add({
+            //     severity: 'warn',
+            //     summary: 'NFC no disponible',
+            //     detail: 'Tu dispositivo o navegador no soporta NFC web'
+            // });
+            return;
+        }
+
+        try {
+            const ndef = new (window as any).NDEFReader();
+            this.nfcController = new AbortController();
+
+            await ndef.scan({ signal: this.nfcController.signal });
+            this.nfcActive.set(true);
+
+            ndef.addEventListener('reading', ({ message }: any) => {
+                for (const record of message.records) {
+                    if (record.recordType === 'text') {
+                        const decoder = new TextDecoder(record.encoding ?? 'utf-8');
+                        const token = decoder.decode(record.data).trim();
+                        // Reutilizar exactamente el mismo flujo que el QR
+                        this.qrService.registerAccess(token, this.mode());
+                        break;
+                    }
+                }
+            });
+
+            ndef.addEventListener('readingerror', () => {
+                this.feedback.set({
+                    visible: true,
+                    success: false,
+                    name: 'Error NFC',
+                    grade: '',
+                    message: 'No se pudo leer la tarjeta',
+                    type: ''
+                });
+                // Auto-ocultar feedback después de 2.5s
+                this.feedbackTimer = setTimeout(() => {
+                    this.feedback.update((f) => ({ ...f, visible: false }));
+                }, 2500);
+                // this.messageService.add({
+                //     severity: 'error',
+                //     summary: 'Error NFC',
+                //     detail: 'No se pudo leer la tarjeta'
+                // });
+            });
+        } catch (err: any) {
+            this.nfcActive.set(false);
+            if (err.name !== 'AbortError') {
+                this.feedback.set({
+                    visible: true,
+                    success: false,
+                    name: 'NFC bloqueado',
+                    grade: '',
+                    message: 'Permiso denegado o NFC desactivado en el dispositivo',
+                    type: ''
+                });
+                // Auto-ocultar feedback después de 2.5s
+                this.feedbackTimer = setTimeout(() => {
+                    this.feedback.update((f) => ({ ...f, visible: false }));
+                }, 2500);
+                // this.messageService.add({
+                //     severity: 'error',
+                //     summary: 'NFC bloqueado',
+                //     detail: 'Permiso denegado o NFC desactivado en el dispositivo'
+                // });
+            }
+        }
+    }
+
+    stopNfcScan(): void {
+        this.nfcController?.abort();
+        this.nfcController = null;
+        this.nfcActive.set(false);
     }
 }
