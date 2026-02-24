@@ -40,7 +40,7 @@
         }
     </div>
     } @else if (student()) {
-    <p-tabs>
+    <p-tabs [value]="activeTab()" (valueChange)="activeTab.set($event?.toString() ?? '0')">
         <p-tablist>
             <p-tab value="0"><i class="pi pi-user mr-1"></i> Personal</p-tab>
             <p-tab value="1"><i class="pi pi-book mr-1"></i> Académico</p-tab>

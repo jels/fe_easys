@@ -24,6 +24,7 @@ import { SectionMock, SubjectMock } from '../../../../shared/data/academic.mock'
     styleUrl: './staff-detail-dialog.component.scss'
 })
 export class StaffDetailDialogComponent implements OnChanges {
+    activeTab = signal('0');
     @Input() staffId: number | null = null;
     @Input() visible = false;
 

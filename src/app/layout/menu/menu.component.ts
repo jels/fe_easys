@@ -153,22 +153,22 @@ export class MenuComponent {
                         icon: 'pi pi-fw pi-lock-open',
                         // visible: this.hasAccess([UserRole.ADMIN, UserRole.ADMINISTRATIVE, UserRole.TEACHER]),
                         items: [
-                            {
-                                label: 'Faltas',
-                                icon: 'pi pi-fw pi-exclamation-triangle',
-                                items: [
-                                    {
-                                        label: 'Registrar Falta',
-                                        icon: 'pi pi-fw pi-plus'
-                                        // routerLink: '/academics/faults/register'
-                                    },
-                                    {
-                                        label: 'Lista de Faltas',
-                                        icon: 'pi pi-fw pi-list'
-                                        // routerLink: '/academics/faults/list'
-                                    }
-                                ]
-                            },
+                            // {
+                            //     label: 'Faltas',
+                            //     icon: 'pi pi-fw pi-exclamation-triangle',
+                            //     items: [
+                            //         {
+                            //             label: 'Registrar Falta',
+                            //             icon: 'pi pi-fw pi-plus'
+                            //             // routerLink: '/academics/faults/register'
+                            //         },
+                            //         {
+                            //             label: 'Lista de Faltas',
+                            //             icon: 'pi pi-fw pi-list'
+                            //             // routerLink: '/academics/faults/list'
+                            //         }
+                            //     ]
+                            // },
                             {
                                 label: 'Calificaciones',
                                 icon: 'pi pi-fw pi-star',

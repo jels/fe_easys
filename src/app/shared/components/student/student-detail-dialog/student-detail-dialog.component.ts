@@ -31,6 +31,8 @@ import { PaymentInstallmentMock } from '../../../../shared/data/payments.mock';
     styleUrl: './student-detail-dialog.component.scss'
 })
 export class StudentDetailDialogComponent implements OnChanges {
+    activeTab = signal('0');
+
     @Input() studentId: number | null = null;
     @Input() visible = false;
 

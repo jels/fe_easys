@@ -23,7 +23,7 @@ const AVATAR_BASE = 'https://ui-avatars.com/api/?background=1e3a5f&color=fff&bol
 
 export const MOCK_FILES: FileMock[] = [
     // ── Fotos de alumnos ───────────────────────────────────────────────────────
-    { idFile: 1, idCompany: 1, entityType: 'STUDENT', idEntity: 1, fileName: 'sofia-martinez.jpg', fileUrl: `${AVATAR_BASE}Sofía+Martínez`, mimeType: 'image/jpeg', fileSize: 48200, isPrimary: true, isActive: true, createdAt: '2025-02-01T10:00:00' },
+    { idFile: 1, idCompany: 1, entityType: 'STUDENT', idEntity: 1, fileName: 'sofia-martinez.jpg', fileUrl: `assets/img/perfildemo.jpg`, mimeType: 'image/jpeg', fileSize: 48200, isPrimary: true, isActive: true, createdAt: '2025-02-01T10:00:00' },
     { idFile: 2, idCompany: 1, entityType: 'STUDENT', idEntity: 2, fileName: 'lucas-gonzalez.jpg', fileUrl: `${AVATAR_BASE}Lucas+González`, mimeType: 'image/jpeg', fileSize: 51300, isPrimary: true, isActive: true, createdAt: '2025-02-01T10:05:00' },
     {
         idFile: 3,

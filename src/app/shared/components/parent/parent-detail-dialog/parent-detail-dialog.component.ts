@@ -32,6 +32,8 @@ interface LinkedStudent {
     styleUrl: './parent-detail-dialog.component.scss'
 })
 export class ParentDetailDialogComponent implements OnChanges {
+    activeTab = signal('0');
+
     @Input() parentId: number | null = null;
     @Input() visible = false;
 

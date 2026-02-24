@@ -39,7 +39,7 @@
         @for (i of [1,2,3]; track i) { <p-skeleton height="3rem" /> }
     </div>
     } @else if (member()) {
-    <p-tabs>
+    <p-tabs [value]="activeTab()" (valueChange)="activeTab.set($event?.toString() ?? '0')">
         <p-tablist>
             <p-tab value="0"><i class="pi pi-user mr-1"></i> Datos Personales</p-tab>
             <p-tab value="1"><i class="pi pi-briefcase mr-1"></i> Datos Laborales</p-tab>
