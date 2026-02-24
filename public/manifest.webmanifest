@@ -1,7 +1,7 @@
 {
-    "name": "EasySys — Gestión Escolar",
-    "short_name": "EasySys",
-    "description": "Sistema de gestión escolar con control de acceso",
+    "name": "SMSystem — Gestión Escolar",
+    "short_name": "SMSystem",
+    "description": "Sistema de Gestión Escolar con control de acceso",
     "theme_color": "#1e1e2e",
     "background_color": "#1e1e2e",
     "display": "standalone",
@@ -24,7 +24,7 @@
             "sizes": "390x844",
             "type": "image/png",
             "form_factor": "narrow",
-            "label": "EasySys — Control de Acceso"
+            "label": "SMSystem — Sistema de Gestión Escolar"
         }
     ],
     "shortcuts": [
