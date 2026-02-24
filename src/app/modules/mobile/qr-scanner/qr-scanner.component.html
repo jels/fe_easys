@@ -16,7 +16,7 @@
         </div>
     </div>
 
-    <!-- Selector modo de acceso -->
+    <!-- Selector de modo -->
     <div class="mode-selector">
         <button class="mode-btn" [class.active]="mode() === 'ENTRADA'" (click)="setMode('ENTRADA')">
             <span>🟢</span> Entrada
@@ -29,26 +29,14 @@
         </button>
     </div>
 
-    <!-- ── Selector QR / NFC ──────────────────────────────────────────────── -->
-    <div class="read-mode-selector">
-        <button class="read-mode-btn" [class.active]="readMode() === 'QR'" (click)="switchReadMode('QR')">
-            <span class="read-mode-icon">📷</span>
-            <span class="read-mode-label">Cámara QR</span>
-        </button>
-
-        <button class="read-mode-btn" [class.active]="readMode() === 'NFC'" [class.unsupported]="!nfcSupported"
-            [disabled]="!nfcSupported" (click)="switchReadMode('NFC')">
-            <span class="read-mode-icon">📡</span>
-            <span class="read-mode-label">Tap NFC</span>
-            @if (!nfcSupported) {
-            <span class="read-mode-unavail">No disponible</span>
-            }
-        </button>
-    </div>
-
-    <!-- ── Viewport QR ───────────────────────────────────────────────────── -->
-    @if (readMode() === 'QR') {
+    <!-- Scanner -->
     <div class="scanner-viewport" [class.flash-green]="flashActive()">
+
+        <zxing-scanner [enable]="scannerEnabled()" [device]="selectedCamera()" [formats]="formats"
+            (camerasFound)="onCamerasFound($event)" (camerasNotFound)="onCamerasNotFound()"
+            (scanSuccess)="onCodeScanned($event)" (scanError)="onScanError($event)" [style.width]="'100%'"
+            [style.height]="'100%'">
+        </zxing-scanner>
 
         @if (!hasCamera()) {
         <div class="no-camera">
@@ -56,85 +44,44 @@
             <p>No se detectó cámara</p>
             <small>Asegurate de dar permisos de cámara</small>
         </div>
-        } @else {
-        <zxing-scanner [enable]="scannerEnabled()" [device]="selectedCamera()" [formats]="formats"
+        }
+
+
+        <!-- @if (!hasCamera()) {
+        <div class="no-camera">
+            <span class="no-camera-icon">📷</span>
+            <p>No se detectó cámara</p>
+            <small>Asegurate de dar permisos de cámara</small>
+        </div>
+        } @else { -->
+        <!-- <zxing-scanner [enable]="scannerEnabled()" [device]="selectedCamera()" [formats]="formats"
             (camerasFound)="onCamerasFound($event)" (camerasNotFound)="onCamerasNotFound()"
             (scanSuccess)="onCodeScanned($event)" (scanError)="onScanError($event)" [style.width]="'100%'"
             [style.height]="'100%'">
-        </zxing-scanner>
+        </zxing-scanner> -->
 
         <!-- Marco de escaneo -->
-        <div class="scan-frame">
+        <!-- <div class="scan-frame">
             <div class="corner tl"></div>
             <div class="corner tr"></div>
             <div class="corner bl"></div>
             <div class="corner br"></div>
             <div class="scan-line"></div>
-        </div>
+        </div> -->
 
-        <div class="scan-hint">
+        <!-- Texto guía -->
+        <!-- <div class="scan-hint">
             <span>Apuntá al código QR del carnet</span>
         </div>
-        }
+        } -->
     </div>
-    }
 
-    <!-- ── Viewport NFC ──────────────────────────────────────────────────── -->
-    @if (readMode() === 'NFC') {
-    <div class="nfc-viewport" [class.nfc-active]="nfcActive()" [class.flash-green]="flashActive()">
-
-        <!-- Animación de ondas -->
-        <div class="nfc-waves">
-            <div class="nfc-wave wave-1"></div>
-            <div class="nfc-wave wave-2"></div>
-            <div class="nfc-wave wave-3"></div>
-            <div class="nfc-icon">
-                @if (nfcActive()) {
-                <span>📡</span>
-                } @else {
-                <span>⏳</span>
-                }
-            </div>
-        </div>
-
-        <!-- Estado NFC -->
-        <div class="nfc-status">
-            @if (nfcActive()) {
-            <div class="nfc-status-text active">
-                <span class="nfc-dot"></span>
-                NFC activo — acercá la tarjeta
-            </div>
-            } @else if (nfcError()) {
-            <div class="nfc-status-text error">
-                ⚠️ {{ nfcError() }}
-            </div>
-            } @else {
-            <div class="nfc-status-text waiting">
-                Iniciando NFC...
-            </div>
-            }
-        </div>
-
-        <!-- Error persistente con botón reintentar -->
-        @if (nfcError() && !nfcActive()) {
-        <button class="btn-retry-nfc" (click)="startNfc()">
-            🔄 Reintentar
-        </button>
-        }
-
-    </div>
-    }
-
-    <!-- ── Feedback overlay (común QR + NFC) ────────────────────────────── -->
+    <!-- Feedback overlay -->
     @if (feedback().visible) {
     <div class="feedback-overlay" [class.feedback-success]="feedback().success"
         [class.feedback-error]="!feedback().success">
-        <div class="feedback-header">
-            <span class="feedback-icon">{{ feedback().success ? '✅' : '❌' }}</span>
-            <span class="feedback-source-badge" [class.badge-nfc]="feedback().source === 'NFC'"
-                [class.badge-qr]="feedback().source === 'QR'">
-                {{ feedback().source === 'NFC' ? '📡 NFC' : '📷 QR' }}
-            </span>
+        <div class="feedback-icon">
+            {{ feedback().success ? '✅' : '❌' }}
         </div>
         <div class="feedback-name">{{ feedback().name }}</div>
         @if (feedback().grade) {
@@ -154,9 +101,6 @@
             <div class="log-item" [class.log-success]="item.success">
                 <span class="log-icon">{{ item.success ? '✓' : '✗' }}</span>
                 <span class="log-name">{{ item.name }}</span>
-                <span class="log-source" [class.source-nfc]="item.source === 'NFC'">
-                    {{ item.source }}
-                </span>
                 <span class="log-time">{{ item.time }}</span>
             </div>
             }
@@ -164,7 +108,7 @@
     </div>
     }
 
-    <!-- Footer -->
+    <!-- Botón Finalizar -->
     <div class="scanner-footer">
         <button class="btn-finalize" (click)="finalize()">
             Finalizar sesión
