@@ -123,6 +123,28 @@ export class MenuComponent {
                             //     // routerLink: '/personnel/attendance'
                             // }
                         ]
+                    },
+                    {
+                        label: 'Chats',
+                        icon: 'pi pi-fw pi-id-card',
+                        // visible: this.hasAccess([UserRole.ADMIN, UserRole.ADMINISTRATIVE]),
+                        items: [
+                            {
+                                label: 'Sala general',
+                                icon: 'pi pi-fw pi-list',
+                                routerLink: '/sys/chats'
+                            }
+                            // {
+                            //     label: 'Nuevo Personal',
+                            //     icon: 'pi pi-fw pi-user-plus'
+                            //     // routerLink: '/personnel/create'
+                            // },
+                            // {
+                            //     label: 'Asistencia',
+                            //     icon: 'pi pi-fw pi-calendar-times'
+                            //     // routerLink: '/personnel/attendance'
+                            // }
+                        ]
                     }
                     // {
                     //     label: 'Salidas',

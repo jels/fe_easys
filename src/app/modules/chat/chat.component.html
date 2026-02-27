@@ -1,0 +1,440 @@
+<!-- src/app/modules/chat/chat.component.html -->
+<div class="chat-page">
+
+    <!-- ══ SIDEBAR ══════════════════════════════════════════════════════════ -->
+    <aside class="chat-sidebar">
+
+        <div class="sidebar-header">
+            <div class="sidebar-title">
+                <span class="sidebar-icon">💬</span>
+                <span>Mensajería</span>
+                @if (totalUnread() > 0) {
+                <span class="badge-unread">{{ totalUnread() }}</span>
+                }
+            </div>
+            <div class="sidebar-actions">
+                <button class="btn-icon-sm" (click)="openNewChatModal('PRIVATE')" pTooltip="Nuevo mensaje directo"
+                    tooltipPosition="bottom">✏️</button>
+                <button class="btn-icon-sm" (click)="openNewChatModal('GROUP')" pTooltip="Nuevo grupo"
+                    tooltipPosition="bottom">👥</button>
+                @if (isAdmin) {
+                <button class="btn-icon-sm" [class.active]="showAdminPanel()"
+                    (click)="showAdminPanel.set(!showAdminPanel())" pTooltip="Panel admin"
+                    tooltipPosition="bottom">👁</button>
+                }
+            </div>
+        </div>
+
+        @if (isAdmin && showAdminPanel() && adminStats()) {
+        <div class="admin-stats-panel">
+            <div class="admin-stat">
+                <span class="admin-stat-val">{{ adminStats().totalRooms }}</span>
+                <span class="admin-stat-lbl">Salas</span>
+            </div>
+            <div class="admin-stat">
+                <span class="admin-stat-val">{{ adminStats().activeUsers }}</span>
+                <span class="admin-stat-lbl">En línea</span>
+            </div>
+            <div class="admin-stat">
+                <span class="admin-stat-val">{{ adminStats().totalMessages }}</span>
+                <span class="admin-stat-lbl">Mensajes</span>
+            </div>
+        </div>
+        }
+
+        <div class="rooms-list">
+            @if (loading()) {
+            @for (i of [1,2,3,4,5]; track i) {
+            <div class="room-skeleton">
+                <div class="sk-avatar"></div>
+                <div class="sk-lines">
+                    <div class="sk-line sk-wide"></div>
+                    <div class="sk-line sk-narrow"></div>
+                </div>
+            </div>
+            }
+            } @else {
+
+            <!-- GENERAL -->
+            @for (room of rooms(); track room.idRoom) {
+            @if (room.type === 'GENERAL') {
+            <div class="room-item general" [class.active]="activeRoom()?.idRoom === room.idRoom"
+                (click)="selectRoom(room)">
+                <div class="room-avatar general-av"><span>#</span></div>
+                <div class="room-info">
+                    <div class="room-name-row">
+                        <span class="room-name">{{ room.name }}</span>
+                        @if (room.lastMessage) {
+                        <span class="room-time">{{ formatTime(room.lastMessage.sentAt) }}</span>
+                        }
+                    </div>
+                    <div class="room-preview">{{ formatLastMessage(room) }}</div>
+                </div>
+                @if ((room.unreadCount ?? 0) > 0) {
+                <span class="unread-badge">{{ room.unreadCount }}</span>
+                }
+            </div>
+            }
+            }
+
+            <!-- ROLE -->
+            @if (hasRoleRooms) {
+            <div class="rooms-section-label">Áreas</div>
+            }
+            @for (room of rooms(); track room.idRoom) {
+            @if (room.type === 'ROLE') {
+            <div class="room-item" [class.active]="activeRoom()?.idRoom === room.idRoom" (click)="selectRoom(room)">
+                <div class="room-avatar role-av" [style.background]="getRoleColor(room.allowedRole ?? '')">
+                    <span>⊕</span>
+                </div>
+                <div class="room-info">
+                    <div class="room-name-row">
+                        <span class="room-name">{{ room.name }}</span>
+                        @if (room.lastMessage) {
+                        <span class="room-time">{{ formatTime(room.lastMessage.sentAt) }}</span>
+                        }
+                    </div>
+                    <div class="room-preview">{{ formatLastMessage(room) }}</div>
+                </div>
+                @if ((room.unreadCount ?? 0) > 0) {
+                <span class="unread-badge">{{ room.unreadCount }}</span>
+                }
+            </div>
+            }
+            }
+
+            <!-- GROUP -->
+            @if (hasGroupRooms) {
+            <div class="rooms-section-label">Grupos</div>
+            }
+            @for (room of rooms(); track room.idRoom) {
+            @if (room.type === 'GROUP') {
+            <div class="room-item" [class.active]="activeRoom()?.idRoom === room.idRoom" (click)="selectRoom(room)">
+                <div class="room-avatar group-av">
+                    <span>{{ room.groupAvatar ?? '👥' }}</span>
+                </div>
+                <div class="room-info">
+                    <div class="room-name-row">
+                        <span class="room-name">{{ room.name }}</span>
+                        @if (room.lastMessage) {
+                        <span class="room-time">{{ formatTime(room.lastMessage.sentAt) }}</span>
+                        }
+                    </div>
+                    <div class="room-preview">{{ formatLastMessage(room) }}</div>
+                </div>
+                @if ((room.unreadCount ?? 0) > 0) {
+                <span class="unread-badge">{{ room.unreadCount }}</span>
+                }
+            </div>
+            }
+            }
+
+            <!-- PRIVATE -->
+            @if (hasPrivateRooms) {
+            <div class="rooms-section-label">Mensajes directos</div>
+            }
+            @for (room of rooms(); track room.idRoom) {
+            @if (room.type === 'PRIVATE') {
+            <div class="room-item" [class.active]="activeRoom()?.idRoom === room.idRoom" (click)="selectRoom(room)">
+                <div class="room-avatar private-av"
+                    [style.background]="getRoomOtherUser(room)?.avatarColor ?? '#64748b'">
+                    <span>{{ getRoomOtherUser(room)?.initials }}</span>
+                    <span class="online-dot" [class.online]="getUserOnlineStatus(room)"></span>
+                </div>
+                <div class="room-info">
+                    <div class="room-name-row">
+                        <span class="room-name">{{ getRoomDisplayName(room) }}</span>
+                        @if (room.lastMessage) {
+                        <span class="room-time">{{ formatTime(room.lastMessage.sentAt) }}</span>
+                        }
+                    </div>
+                    <div class="room-preview">{{ formatLastMessage(room) }}</div>
+                </div>
+                @if ((room.unreadCount ?? 0) > 0) {
+                <span class="unread-badge">{{ room.unreadCount }}</span>
+                }
+            </div>
+            }
+            }
+            }
+        </div>
+    </aside>
+
+    <!-- ══ PANEL PRINCIPAL ═══════════════════════════════════════════════════ -->
+    <main class="chat-main">
+
+        @if (!activeRoom()) {
+        <div class="chat-empty">
+            <div class="empty-icon">💬</div>
+            <h3>Seleccioná una sala</h3>
+            <p>Elegí una conversación del panel izquierdo</p>
+        </div>
+
+        } @else {
+
+        <!-- Header -->
+        <div class="chat-header">
+            <div class="chat-header-left">
+                @if (activeRoom()!.type === 'PRIVATE') {
+                <div class="chat-header-avatar" [style.background]="getRoomOtherUser(activeRoom()!)?.avatarColor">
+                    {{ getRoomOtherUser(activeRoom()!)?.initials }}
+                    <span class="header-online-dot" [class.online]="getUserOnlineStatus(activeRoom()!)"></span>
+                </div>
+                } @else {
+                <div class="chat-header-icon" [class.general-color]="activeRoom()!.type === 'GENERAL'"
+                    [class.group-color]="activeRoom()!.type === 'GROUP'"
+                    [style.background]="activeRoom()!.type === 'ROLE' ? getRoleColor(activeRoom()!.allowedRole ?? '') : ''">
+                    {{ getRoomIcon(activeRoom()!) }}
+                </div>
+                }
+                <div>
+                    <div class="chat-header-name">{{ getRoomDisplayName(activeRoom()!) }}</div>
+                    <div class="chat-header-sub">
+                        @if (activeRoom()!.type === 'GENERAL') { Canal general institucional }
+                        @else if (activeRoom()!.type === 'ROLE') { {{ activeRoom()!.description }} }
+                        @else if (activeRoom()!.type === 'GROUP') {
+                        {{ getGroupMemberPreview(activeRoom()!) }}
+                        }
+                        @else if (activeRoom()!.type === 'PRIVATE') {
+                        <span [style.color]="getRoleColor(getRoomOtherUser(activeRoom()!)?.role ?? '')">
+                            {{ getRoomOtherUser(activeRoom()!)?.role }}
+                        </span>
+                        · {{ getUserOnlineStatus(activeRoom()!) ? 'En línea' : 'Desconectado' }}
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-header-right">
+                @if (isAdmin && adminStats()) {
+                @for (rs of adminStats().roomStats; track rs.room.idRoom) {
+                @if (rs.room.idRoom === activeRoom()!.idRoom) {
+                <span class="header-msg-count">{{ rs.msgCount }} mensajes</span>
+                }
+                }
+                }
+                @if (activeRoom()!.type === 'GROUP') {
+                <button class="btn-icon-sm" [class.active]="showGroupDetail()"
+                    (click)="showGroupDetail.set(!showGroupDetail())" pTooltip="Ver miembros">👤</button>
+                }
+            </div>
+        </div>
+
+        <!-- Layout con panel de detalle de grupo -->
+        <div class="chat-body" [class.with-detail]="showGroupDetail()">
+
+            <!-- Mensajes -->
+            <div class="messages-area" #messagesContainer>
+                @if (loadingMsgs()) {
+                <div class="msgs-loading">Cargando mensajes...</div>
+                } @else if (messages().length === 0) {
+                <div class="msgs-empty">No hay mensajes aún. ¡Sé el primero!</div>
+                } @else {
+                @for (msg of messages(); track msg.idMessage) {
+                <div class="msg-wrapper" [class.own]="isOwnMessage(msg)">
+                    @if (!isOwnMessage(msg)) {
+                    <div class="msg-avatar" [style.background]="msg.senderColor" [pTooltip]="msg.senderName">
+                        {{ msg.senderInitials }}
+                    </div>
+                    }
+                    <div class="msg-content-col">
+                        @if (!isOwnMessage(msg)) {
+                        <div class="msg-meta">
+                            <span class="msg-sender">{{ msg.senderName }}</span>
+                            <span class="msg-role-tag" [style.color]="getRoleColor(msg.senderRole)">
+                                {{ msg.senderRole }}
+                            </span>
+                            <span class="msg-time">{{ formatTime(msg.sentAt) }}</span>
+                        </div>
+                        }
+                        <div class="msg-bubble" [class.own-bubble]="isOwnMessage(msg)">
+                            @if (msg.replyTo && msg.replyPreview) {
+                            <div class="msg-reply-preview">
+                                <span>{{ msg.replyPreview }}</span>
+                            </div>
+                            }
+                            <span class="msg-text">{{ msg.content }}</span>
+                            <div class="msg-footer">
+                                @if (isOwnMessage(msg)) {
+                                <span class="msg-time-own">{{ formatTime(msg.sentAt) }}</span>
+                                <span class="msg-status" [class.read]="msg.status === 'READ'">
+                                    {{ msg.status === 'SENT' ? '✓' : '✓✓' }}
+                                </span>
+                                }
+                            </div>
+                        </div>
+                        <div class="msg-actions">
+                            <button class="msg-action-btn" (click)="setReply(msg)" pTooltip="Responder">↩</button>
+                            @if (isOwnMessage(msg) || isAdmin) {
+                            <button class="msg-action-btn danger" (click)="deleteMessage(msg)"
+                                pTooltip="Eliminar">🗑</button>
+                            }
+                        </div>
+                    </div>
+                </div>
+                }
+                }
+            </div>
+
+            <!-- Panel detalle grupo -->
+            @if (showGroupDetail() && activeRoom()!.type === 'GROUP') {
+            <div class="group-detail-panel">
+                <div class="group-detail-header">
+                    <span>{{ activeRoom()!.groupAvatar }} {{ activeRoom()!.name }}</span>
+                    <button (click)="showGroupDetail.set(false)">✕</button>
+                </div>
+                <div class="group-detail-desc">
+                    @if (activeRoom()!.description) {
+                    <p>{{ activeRoom()!.description }}</p>
+                    }
+                    <span class="group-member-count">{{ groupMembers().length }} miembros</span>
+                </div>
+                <div class="group-detail-members">
+                    @for (member of groupMembers(); track member.idUser) {
+                    <div class="group-member-row">
+                        <div class="group-member-av" [style.background]="member.avatarColor">
+                            {{ member.initials }}
+                            <span class="online-dot" [class.online]="member.isOnline"></span>
+                        </div>
+                        <div class="group-member-info">
+                            <span class="group-member-name">{{ member.fullName }}</span>
+                            <span class="group-member-role" [style.color]="getRoleColor(member.role)">
+                                {{ member.role }}
+                            </span>
+                        </div>
+                        <span class="group-member-status">
+                            {{ member.isOnline ? '🟢' : '⚫' }}
+                        </span>
+                    </div>
+                    }
+                </div>
+            </div>
+            }
+        </div>
+
+        <!-- Reply bar -->
+        @if (replyTo()) {
+        <div class="reply-bar-input">
+            <span class="reply-bar-line"></span>
+            <div class="reply-bar-content">
+                <span class="reply-bar-name">{{ replyTo()!.senderName }}</span>
+                <span class="reply-bar-text">{{ replyTo()!.content.slice(0, 80) }}</span>
+            </div>
+            <button class="reply-bar-close" (click)="clearReply()">✕</button>
+        </div>
+        }
+
+        <!-- Input -->
+        <div class="chat-input-area">
+            <textarea class="chat-input" [(ngModel)]="messageText" (keydown)="onKeyDown($event)"
+                placeholder="Escribí un mensaje... (Enter para enviar)" rows="1" [disabled]="sending()"></textarea>
+            <button class="btn-send" [disabled]="!messageText.trim() || sending()" (click)="sendMessage()">
+                @if (sending()) { ⏳ } @else { ➤ }
+            </button>
+        </div>
+        }
+    </main>
+</div>
+
+<!-- ══ MODAL NUEVO CHAT ════════════════════════════════════════════════════════ -->
+@if (showNewChatModal()) {
+<div class="modal-overlay" (click)="closeNewChatModal()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+
+        <!-- Pestañas -->
+        <div class="modal-tabs">
+            <button class="modal-tab" [class.active]="newChatTab() === 'PRIVATE'" (click)="newChatTab.set('PRIVATE')">
+                💬 Mensaje directo
+            </button>
+            <button class="modal-tab" [class.active]="newChatTab() === 'GROUP'" (click)="newChatTab.set('GROUP')">
+                👥 Nuevo grupo
+            </button>
+            <button class="modal-close-btn" (click)="closeNewChatModal()">✕</button>
+        </div>
+
+        <!-- ── Pestaña PRIVADO ────────────────────────────────────────── -->
+        @if (newChatTab() === 'PRIVATE') {
+        <div class="modal-section-title">Seleccioná un usuario</div>
+        <div class="modal-users">
+            @for (user of availableUsers(); track user.idUser) {
+            <div class="modal-user-item" (click)="startPrivateChat(user)">
+                <div class="modal-user-av" [style.background]="user.avatarColor">
+                    {{ user.initials }}
+                    <span class="online-dot" [class.online]="user.isOnline"></span>
+                </div>
+                <div class="modal-user-info">
+                    <span class="modal-user-name">{{ user.fullName }}</span>
+                    <span class="modal-user-role" [style.color]="getRoleColor(user.role)">
+                        {{ user.role }}
+                    </span>
+                </div>
+                <span class="modal-user-status">
+                    {{ user.isOnline ? '🟢' : '⚫' }}
+                </span>
+            </div>
+            }
+        </div>
+        }
+
+        <!-- ── Pestaña GRUPO ──────────────────────────────────────────── -->
+        @if (newChatTab() === 'GROUP') {
+        <div class="group-create-form">
+
+            <!-- Nombre + emoji -->
+            <div class="group-name-row">
+                <div class="emoji-picker-btn" (click)="showEmojiPicker.set(!showEmojiPicker())">
+                    {{ groupEmoji }}
+                    @if (showEmojiPicker()) {
+                    <div class="emoji-dropdown" (click)="$event.stopPropagation()">
+                        @for (e of groupEmojiList; track e) {
+                        <span class="emoji-opt" (click)="selectGroupEmoji(e)">{{ e }}</span>
+                        }
+                    </div>
+                    }
+                </div>
+                <input class="group-name-input" type="text" [(ngModel)]="groupName" placeholder="Nombre del grupo"
+                    maxlength="60" />
+            </div>
+
+            <!-- Selección de miembros -->
+            <div class="modal-section-title">
+                Miembros
+                <span class="members-count-badge">
+                    {{ selectedMemberIds().length }} seleccionados
+                </span>
+            </div>
+            <div class="modal-users">
+                @for (user of availableUsers(); track user.idUser) {
+                <div class="modal-user-item selectable" [class.selected]="isMemberSelected(user.idUser)"
+                    (click)="toggleGroupMember(user.idUser)">
+                    <div class="modal-user-av" [style.background]="user.avatarColor">
+                        {{ user.initials }}
+                        <span class="online-dot" [class.online]="user.isOnline"></span>
+                    </div>
+                    <div class="modal-user-info">
+                        <span class="modal-user-name">{{ user.fullName }}</span>
+                        <span class="modal-user-role" [style.color]="getRoleColor(user.role)">
+                            {{ user.role }}
+                        </span>
+                    </div>
+                    <span class="member-check">
+                        {{ isMemberSelected(user.idUser) ? '✅' : '⬜' }}
+                    </span>
+                </div>
+                }
+            </div>
+
+            <!-- Botón crear -->
+            <div class="group-create-footer">
+                <button class="btn-create-group" [disabled]="!groupName.trim() || selectedMemberIds().length < 2"
+                    (click)="createGroup()">
+                    Crear grupo ({{ selectedMemberIds().length + 1 }} miembros)
+                </button>
+            </div>
+        </div>
+        }
+    </div>
+</div>
+}
+
+<p-toast position="top-right" />

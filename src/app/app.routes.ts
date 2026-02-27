@@ -62,6 +62,10 @@ export const routes: Routes = [
             {
                 path: 'credentials',
                 loadChildren: () => import('./modules/credentials/credentials.routes').then((r) => r.credentialsRoutes)
+            },
+            {
+                path: 'chats',
+                loadChildren: () => import('./modules/chat/chat.routes').then((r) => r.chatRoutes)
             }
         ]
     },
