@@ -20,30 +20,30 @@
         <div class="stat-card stat-sections">
             <div class="stat-icon"><i class="pi pi-users"></i></div>
             <div class="stat-info">
-                <span class="stat-value">{{ stats().totalSections }}</span>
+                <span class="stat-value">{{ stats()!.totalSections }}</span>
                 <span class="stat-label">Secciones activas</span>
             </div>
         </div>
         <div class="stat-card stat-students">
             <div class="stat-icon"><i class="pi pi-user"></i></div>
             <div class="stat-info">
-                <span class="stat-value">{{ stats().totalStudents }}</span>
+                <span class="stat-value">{{ stats()!.totalStudents }}</span>
                 <span class="stat-label">Alumnos activos</span>
             </div>
         </div>
         <div class="stat-card stat-subjects">
             <div class="stat-icon"><i class="pi pi-book"></i></div>
             <div class="stat-info">
-                <span class="stat-value">{{ stats().totalSubjects }}</span>
+                <span class="stat-value">{{ stats()!.totalSubjects }}</span>
                 <span class="stat-label">Materias</span>
             </div>
         </div>
         <div class="stat-card stat-period">
             <div class="stat-icon"><i class="pi pi-calendar"></i></div>
             <div class="stat-info">
-                <span class="stat-value period-name">{{ stats().activePeriod }}</span>
+                <span class="stat-value period-name">{{ stats()!.activePeriod }}</span>
                 <span class="stat-label">Período activo</span>
-                <span class="stat-sub">{{ stats().scoresLoaded }} notas cargadas</span>
+                <span class="stat-sub">{{ stats()!.scoresLoaded }} notas cargadas</span>
             </div>
         </div>
     </div>
@@ -66,7 +66,6 @@
                 <!-- ══════════════════════════════════════════════════════════ -->
                 <p-tabpanel value="0">
 
-                    <!-- Selectores Grado / Sección -->
                     <div class="grade-selectors">
                         <div class="selector-group">
                             <label class="selector-label">Grado</label>
@@ -89,7 +88,6 @@
                         }
                     </div>
 
-                    <!-- Estado vacío: sin selección -->
                     @if (!selectedGrade || !selectedSection) {
                     <div class="empty-tab">
                         <i class="pi pi-arrow-up-left"></i>
@@ -97,28 +95,25 @@
                     </div>
                     }
 
-                    <!-- Loading alumnos -->
                     @if (loadingStudents() && selectedSection) {
                     <div class="flex flex-col gap-2 mt-4">
                         @for (i of [1,2,3]; track i) { <p-skeleton height="3rem" /> }
                     </div>
                     }
 
-                    <!-- Tabla de alumnos con row expansion -->
                     @if (!loadingStudents() && sectionStudents().length > 0) {
                     <div class="students-grade-list">
                         @for (grid of gradeGrids(); track grid.student.idStudent) {
-                        <!-- Fila del alumno -->
                         <div class="student-row" [class.expanded]="grid.expanded">
                             <div class="student-row-header" (click)="toggleStudentExpansion(grid)">
                                 <div class="student-row-left">
                                     <i class="pi" [class.pi-chevron-down]="grid.expanded"
                                         [class.pi-chevron-right]="!grid.expanded"></i>
                                     <div class="student-avatar">
-                                        {{ grid.student.fullName.charAt(0) }}
+                                        {{ getStudentInitial(grid.student) }}
                                     </div>
                                     <div class="student-info">
-                                        <span class="student-name">{{ grid.student.fullName }}</span>
+                                        <span class="student-name">{{ getStudentName(grid.student) }}</span>
                                         <span class="student-sub mono">{{ grid.student.enrollmentNumber }}</span>
                                     </div>
                                 </div>
@@ -136,7 +131,6 @@
                                 </div>
                             </div>
 
-                            <!-- Panel de notas expandido -->
                             @if (grid.expanded) {
                             <div class="grade-panel">
                                 @if (loadingScores()[grid.student.idStudent]) {
@@ -195,7 +189,7 @@
                                                         [(ngModel)]="cell.tempValue"
                                                         (blur)="saveScore(grid, row, period, cell)"
                                                         (keydown)="onScoreKeydown($event, grid, row, period, cell)"
-                                                        #scoreInput autofocus />
+                                                        autofocus />
                                                     } @else {
                                                     <span class="score-cell" [class]="getScoreColor(cell.score)"
                                                         [class.empty-score]="cell.score === null"
@@ -223,7 +217,6 @@
                                             </tr>
                                             }
                                         </tbody>
-                                        <!-- Footer: Promedios por período -->
                                         <tfoot>
                                             <tr class="period-avg-row">
                                                 <td class="col-subject footer-label">Promedio período</td>
@@ -298,16 +291,16 @@
                                 <td><span class="subject-code-badge">{{ subject.code }}</span></td>
                                 <td class="font-medium">{{ subject.name }}</td>
                                 <td class="text-center">
-                                    <i
-                                        [class]="subject.isActive ? 'pi pi-check-circle text-green-500' : 'pi pi-times-circle text-red-400'"></i>
+                                    <i [class]="subject.isActive
+                                        ? 'pi pi-check-circle text-green-500'
+                                        : 'pi pi-times-circle text-red-400'"></i>
                                 </td>
                             </tr>
                         </ng-template>
                     </p-table>
 
                     <div class="tab-section-title mt-6">Secciones por Grado</div>
-                    <p-table [value]="sections().length ? sections() : allSections" styleClass="p-datatable-sm"
-                        responsiveLayout="scroll">
+                    <p-table [value]="allSections()" styleClass="p-datatable-sm" responsiveLayout="scroll">
                         <ng-template pTemplate="header">
                             <tr>
                                 <th>Grado</th>
@@ -404,7 +397,7 @@
                 <!-- TAB 4 — PERÍODOS                                          -->
                 <!-- ══════════════════════════════════════════════════════════ -->
                 <p-tabpanel value="3">
-                    <div class="tab-section-title">Bimestres — Año Lectivo 2025</div>
+                    <div class="tab-section-title">Bimestres — Año Lectivo Activo</div>
                     <div class="periods-grid">
                         @for (period of periods(); track period.idSchoolPeriod) {
                         <div class="period-card" [class.period-active]="period.isActive">

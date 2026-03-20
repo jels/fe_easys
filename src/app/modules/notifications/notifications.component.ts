@@ -1,4 +1,5 @@
 // src/app/modules/notifications/notifications.component.ts
+
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -18,9 +19,19 @@ import { BadgeModule } from 'primeng/badge';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
-import { NotificationsService, NotificationFilter, CreateNotificationRequest } from '../../core/services/conf/notifications.service';
-import { NotificationMock, NotificationTypeMock } from '../../shared/data/notifications.mock';
+// Services
+import { NotificationsService, NotificationFilter } from '../../core/services/api/notifications.service';
+import { StudentsService } from '../../core/services/api/students.service';
+import { StaffService } from '../../core/services/api/staff.service';
+import { AuthService } from '../../core/services/api/auth.service';
+
+// Models
+import { NotificationTypeResponse, AppNotificationResponse, NotificationStatsResponse, CreateAppNotificationRequest } from '../../core/models/notifications.models';
+import { StaffResponse } from '../../core/models/staff.models';
+
+// Pipes
 import { TypeCountPipe } from '../../shared/pipes/type-count.pipe';
+import { StudentResponse } from '../../core/models/student.dto';
 
 @Component({
     selector: 'app-notifications',
@@ -49,25 +60,29 @@ import { TypeCountPipe } from '../../shared/pipes/type-count.pipe';
 })
 export class NotificationsComponent implements OnInit, OnDestroy {
     // ── Datos ─────────────────────────────────────────────────────────────────
-    types = signal<NotificationTypeMock[]>([]);
-    notifications = signal<NotificationMock[]>([]);
-    stats = signal<any>(null);
+    types = signal<NotificationTypeResponse[]>([]);
+    notifications = signal<AppNotificationResponse[]>([]);
+    stats = signal<NotificationStatsResponse | null>(null);
 
     // ── Estado UI ─────────────────────────────────────────────────────────────
     loadingNotifs = signal(false);
-    selectedTypeId = signal<number | null>(null); // null = todas
+    selectedTypeId = signal<number | null>(null);
     searchText = '';
     filterPriority: string | null = null;
     filterRead: boolean | null = null;
 
     // ── Detalle ───────────────────────────────────────────────────────────────
     showDetail = signal(false);
-    selectedNotif = signal<NotificationMock | null>(null);
+    selectedNotif = signal<AppNotificationResponse | null>(null);
 
     // ── Crear / enviar ────────────────────────────────────────────────────────
     showCreateForm = signal(false);
     savingNotif = signal(false);
     createForm!: FormGroup;
+
+    // Para el selector de target — cargados del backend
+    private _students = signal<StudentResponse[]>([]);
+    private _staff = signal<StaffResponse[]>([]);
 
     readonly priorityOptions = [
         { label: 'Todos', value: null },
@@ -99,6 +114,9 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
     constructor(
         private notifService: NotificationsService,
+        private studentsService: StudentsService,
+        private staffService: StaffService,
+        private authService: AuthService,
         private fb: FormBuilder,
         private messageService: MessageService,
         private confirmationService: ConfirmationService
@@ -110,6 +128,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
         this.loadTypes();
         this.loadStats();
         this.loadNotifications();
+        this.loadTargetData();
     }
 
     ngOnDestroy(): void {
@@ -120,33 +139,81 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     // ── Carga ─────────────────────────────────────────────────────────────────
 
     loadTypes(): void {
+        const idCompany = this.authService.idCompany;
+        if (!idCompany) return;
         this.notifService
-            .getTypes()
+            .getTypes(idCompany)
             .pipe(takeUntil(this.destroy$))
-            .subscribe((t) => this.types.set(t));
+            .subscribe({
+                next: (res) => {
+                    if (res.success) this.types.set(res.data ?? []);
+                }
+            });
     }
 
     loadStats(): void {
+        const idCompany = this.authService.idCompany;
+        if (!idCompany) return;
         this.notifService
-            .getStats()
+            .getStats(idCompany)
             .pipe(takeUntil(this.destroy$))
-            .subscribe((s) => this.stats.set(s));
+            .subscribe({
+                next: (res) => {
+                    if (res.success) this.stats.set(res.data ?? null);
+                }
+            });
     }
 
     loadNotifications(): void {
+        const idCompany = this.authService.idCompany;
+        if (!idCompany) return;
         this.loadingNotifs.set(true);
+
         const f: NotificationFilter = {
-            search: this.searchText || undefined,
-            idNotificationType: this.selectedTypeId(),
+            idNotificationType: this.selectedTypeId() ?? undefined,
             priority: this.filterPriority ?? undefined,
             isRead: this.filterRead ?? undefined
         };
+
         this.notifService
-            .getNotifications(f)
+            .getNotifications(idCompany, f)
             .pipe(takeUntil(this.destroy$))
-            .subscribe((n) => {
-                this.notifications.set(n);
-                this.loadingNotifs.set(false);
+            .subscribe({
+                next: (res) => {
+                    let data = res.success ? (res.data?.content ?? []) : [];
+                    // Filtro de búsqueda texto client-side
+                    if (this.searchText) {
+                        const q = this.searchText.toLowerCase();
+                        data = data.filter((n) => n.title.toLowerCase().includes(q) || n.body.toLowerCase().includes(q) || (n.typeName ?? '').toLowerCase().includes(q));
+                    }
+                    this.notifications.set(data);
+                    this.loadingNotifs.set(false);
+                },
+                error: () => this.loadingNotifs.set(false)
+            });
+    }
+
+    // Carga alumnos y personal para el selector de target del formulario
+    private loadTargetData(): void {
+        const idCompany = this.authService.idCompany;
+        if (!idCompany) return;
+
+        this.studentsService
+            .getAll(idCompany, { size: 500 })
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: (res) => {
+                    if (res.success) this._students.set(res.data?.content ?? []);
+                }
+            });
+
+        this.staffService
+            .getAll(idCompany, { size: 200 })
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: (res) => {
+                    if (res.success) this._staff.set(res.data?.content ?? []);
+                }
             });
     }
 
@@ -163,55 +230,65 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     onFilter(): void {
         this.loadNotifications();
     }
+
     clearFilters(): void {
         this.searchText = '';
         this.filterPriority = null;
         this.filterRead = null;
         this.loadNotifications();
     }
+
     get hasFilters(): boolean {
         return !!(this.searchText || this.filterPriority || this.filterRead !== null);
     }
 
     // ── Lectura ───────────────────────────────────────────────────────────────
 
-    openDetail(notif: NotificationMock): void {
+    openDetail(notif: AppNotificationResponse): void {
         this.selectedNotif.set(notif);
         this.showDetail.set(true);
         if (!notif.isRead) {
             this.notifService
-                .markAsRead(notif.idNotification)
+                .markAsRead(notif.idAppNotification)
                 .pipe(takeUntil(this.destroy$))
-                .subscribe(() => {
-                    this.loadNotifications();
-                    this.loadStats();
+                .subscribe({
+                    next: () => {
+                        this.loadNotifications();
+                        this.loadStats();
+                    }
                 });
         }
     }
 
-    toggleRead(notif: NotificationMock, event: Event): void {
+    toggleRead(notif: AppNotificationResponse, event: Event): void {
         event.stopPropagation();
-        const action$ = notif.isRead ? this.notifService.markAsUnread(notif.idNotification) : this.notifService.markAsRead(notif.idNotification);
-        action$.pipe(takeUntil(this.destroy$)).subscribe(() => {
-            this.loadNotifications();
-            this.loadStats();
+        const action$ = notif.isRead ? this.notifService.markAsUnread(notif.idAppNotification) : this.notifService.markAsRead(notif.idAppNotification);
+        action$.pipe(takeUntil(this.destroy$)).subscribe({
+            next: () => {
+                this.loadNotifications();
+                this.loadStats();
+            }
         });
     }
 
     markAllRead(): void {
+        const idCompany = this.authService.idCompany;
+        if (!idCompany) return;
         this.notifService
-            .markAllAsRead(this.selectedTypeId() ?? undefined)
+            .markAllAsRead(idCompany, this.selectedTypeId() ?? undefined)
             .pipe(takeUntil(this.destroy$))
-            .subscribe(() => {
-                this.loadNotifications();
-                this.loadStats();
-                this.messageService.add({ severity: 'success', summary: 'Todas marcadas como leídas' });
+            .subscribe({
+                next: () => {
+                    this.loadNotifications();
+                    this.loadStats();
+                    this.messageService.add({ severity: 'success', summary: 'Todas marcadas como leídas' });
+                }
             });
     }
 
     // ── Eliminar ──────────────────────────────────────────────────────────────
 
-    confirmDelete(notif: NotificationMock, event: Event): void {
+    confirmDelete(notif: AppNotificationResponse, event: Event): void {
         event.stopPropagation();
         this.confirmationService.confirm({
             message: `¿Eliminar la notificación "${notif.title}"?`,
@@ -219,15 +296,17 @@ export class NotificationsComponent implements OnInit, OnDestroy {
             icon: 'pi pi-trash',
             accept: () => {
                 this.notifService
-                    .deleteNotification(notif.idNotification)
+                    .deleteNotification(notif.idAppNotification)
                     .pipe(takeUntil(this.destroy$))
-                    .subscribe(() => {
-                        this.loadNotifications();
-                        this.loadStats();
-                        if (this.selectedNotif()?.idNotification === notif.idNotification) {
-                            this.showDetail.set(false);
+                    .subscribe({
+                        next: () => {
+                            this.loadNotifications();
+                            this.loadStats();
+                            if (this.selectedNotif()?.idAppNotification === notif.idAppNotification) {
+                                this.showDetail.set(false);
+                            }
+                            this.messageService.add({ severity: 'success', summary: 'Notificación eliminada' });
                         }
-                        this.messageService.add({ severity: 'success', summary: 'Notificación eliminada' });
                     });
             }
         });
@@ -245,9 +324,13 @@ export class NotificationsComponent implements OnInit, OnDestroy {
             this.createForm.markAllAsTouched();
             return;
         }
+        const idCompany = this.authService.idCompany;
+        if (!idCompany) return;
         this.savingNotif.set(true);
+
         const v = this.createForm.value;
-        const req: CreateNotificationRequest = {
+        const req: CreateAppNotificationRequest = {
+            idCompany,
             idNotificationType: v.idNotificationType,
             title: v.title,
             body: v.body,
@@ -256,20 +339,23 @@ export class NotificationsComponent implements OnInit, OnDestroy {
             idTarget: v.idTarget || undefined,
             sendNow: v.sendNow ?? true
         };
+
         this.notifService
             .createAndSend(req)
             .pipe(takeUntil(this.destroy$))
             .subscribe({
-                next: () => {
+                next: (res) => {
                     this.savingNotif.set(false);
-                    this.showCreateForm.set(false);
-                    this.loadNotifications();
-                    this.loadStats();
-                    this.messageService.add({
-                        severity: 'success',
-                        summary: req.sendNow ? 'Notificación enviada' : 'Notificación guardada',
-                        detail: req.title
-                    });
+                    if (res.success) {
+                        this.showCreateForm.set(false);
+                        this.loadNotifications();
+                        this.loadStats();
+                        this.messageService.add({
+                            severity: 'success',
+                            summary: req.sendNow ? 'Notificación enviada' : 'Notificación guardada',
+                            detail: req.title
+                        });
+                    }
                 },
                 error: () => this.savingNotif.set(false)
             });
@@ -278,33 +364,19 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     getPriorityLabel(p: string): string {
-        const m: Record<string, string> = { CRITICAL: 'Crítico', HIGH: 'Alto', MEDIUM: 'Medio', LOW: 'Bajo' };
-        return m[p] ?? p;
+        return ({ CRITICAL: 'Crítico', HIGH: 'Alto', MEDIUM: 'Medio', LOW: 'Bajo' } as Record<string, string>)[p] ?? p;
     }
 
     getPrioritySeverity(p: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
-        const m: Record<string, 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast'> = {
-            CRITICAL: 'danger',
-            HIGH: 'warn',
-            MEDIUM: 'info',
-            LOW: 'secondary'
-        };
-        return m[p] ?? 'secondary';
+        return ({ CRITICAL: 'danger', HIGH: 'warn', MEDIUM: 'info', LOW: 'secondary' } as Record<string, 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast'>)[p] ?? 'secondary';
     }
 
     getScopeLabel(s: string): string {
-        const m: Record<string, string> = {
-            ALL: 'General',
-            STUDENT: 'Alumno',
-            STAFF: 'Personal',
-            GRADE: 'Grado',
-            SECTION: 'Sección'
-        };
-        return m[s] ?? s;
+        return ({ ALL: 'General', STUDENT: 'Alumno', STAFF: 'Personal', GRADE: 'Grado', SECTION: 'Sección' } as Record<string, string>)[s] ?? s;
     }
 
     getUnreadCount(idType: number): number {
-        return this.stats()?.byType?.find((t: any) => t.idNotificationType === idType)?.unread ?? 0;
+        return this.stats()?.byType?.find((t) => t.idNotificationType === idType)?.unread ?? 0;
     }
 
     get selectedTypeUnread(): number {
@@ -322,9 +394,19 @@ export class NotificationsComponent implements OnInit, OnDestroy {
         return scope === 'STUDENT' || scope === 'STAFF';
     }
 
+    // Reemplaza notifService.getStudentOptions() / getStaffOptions()
     get targetOptions(): { label: string; value: number }[] {
         const scope = this.createForm?.get('scope')?.value;
-        return scope === 'STUDENT' ? this.notifService.getStudentOptions() : this.notifService.getStaffOptions();
+        if (scope === 'STUDENT') {
+            return this._students().map((s) => ({
+                label: `${s.person.fullName} — ${s.gradeName ?? ''} ${s.sectionName ?? ''}`.trimEnd(),
+                value: s.idStudent
+            }));
+        }
+        return this._staff().map((s) => ({
+            label: `${s.person.fullName} (${s.position ?? s.staffType})`,
+            value: s.idStaff
+        }));
     }
 
     isFieldInvalid(field: string): boolean {

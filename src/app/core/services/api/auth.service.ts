@@ -1,216 +1,214 @@
-// src/app/features/auth/services/auth.service.ts
+// src/app/core/services/api/auth.service.ts
 
+import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Injectable, inject, signal } from '@angular/core';
+import { Observable, tap, catchError, throwError } from 'rxjs';
 import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, catchError, tap, throwError } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { ApiResponse, JwtPayload, LoginRequest, LoginResponse, RefreshTokenRequest, RefreshTokenResponse, RegisterRequest, UserInfo } from '../../models/auth.models';
+import { LoginRequest, ChangePasswordRequest, ApiResponse, AuthResponse, SessionData, UserInfoResponse, RoleInfo, JwtPayload } from '../../models/auth.models';
+
+// ── Claves de localStorage ────────────────────────────────────────────────────
+// Deben coincidir exactamente con lo que leen el interceptor y el guard
+const KEY_ACCESS_TOKEN = 'access_token'; // authGuard    → localStorage.getItem('access_token')
+const KEY_REFRESH_TOKEN = 'refresh_token';
+const KEY_USER_INFO = 'user_info'; // roleGuard    → localStorage.getItem('user_info')
 
 @Injectable({
     providedIn: 'root'
 })
 export class AuthService {
-    private http = inject(HttpClient);
-    private router = inject(Router);
+    private readonly API = `${environment.apiUrl}auth`;
 
-    private currentUserSubject = new BehaviorSubject<UserInfo | null>(null);
-    public currentUser$ = this.currentUserSubject.asObservable();
+    constructor(
+        private http: HttpClient,
+        private router: Router
+    ) {}
 
-    public isAuthenticated = signal<boolean>(false);
+    // ── HTTP calls ────────────────────────────────────────────────────────────
 
-    private readonly ACCESS_TOKEN_KEY = 'access_token';
-    private readonly REFRESH_TOKEN_KEY = 'refresh_token';
-    private readonly USER_KEY = 'user_info';
-
-    constructor() {
-        this.checkStoredAuth();
-    }
-
-    private checkStoredAuth(): void {
-        const token = this.getAccessToken();
-        const user = this.getStoredUser();
-
-        if (token && user && !this.isTokenExpired(token)) {
-            this.currentUserSubject.next(user);
-            this.isAuthenticated.set(true);
-        } else {
-            this.clearAuth();
-        }
+    /**
+     * POST /api/v1/auth/login
+     * Guarda access_token, refresh_token y user_info en localStorage.
+     */
+    login(username: string, password: string): Observable<ApiResponse<AuthResponse>> {
+        const body: LoginRequest = { username, password };
+        return this.http.post<ApiResponse<AuthResponse>>(`${this.API}/login`, body).pipe(
+            tap((res) => {
+                if (res.success && res.data) {
+                    this.storeSession(res.data);
+                }
+            }),
+            catchError((err) => throwError(() => err))
+        );
     }
 
     /**
-     * ✅ Login simplificado que coincide con la estructura del backend
+     * POST /api/v1/auth/refresh
+     * El interceptor llama esto automáticamente ante un 401.
      */
-    login(credentials: LoginRequest): Observable<LoginResponse> {
-        return this.http.post<LoginResponse>(`${environment.apiUrl}auth/login`, credentials).pipe(
-            tap((response) => {
-                console.log('📦 Login response:', response);
-
-                if (response.success && response.data) {
-                    const { accessToken, refreshToken, user } = response.data;
-
-                    // Validar que tenemos los datos necesarios
-                    if (!accessToken || !refreshToken || !user) {
-                        throw new Error('Respuesta incompleta del servidor');
-                    }
-
-                    // Convertir el user del backend al formato UserInfo del frontend
-                    const userInfo: UserInfo = {
-                        id: user.id,
-                        email: user.email,
-                        firstName: user.firstName,
-                        lastName: user.lastName,
-                        // ⚠️ Convertir role (string) a roles (array)
-                        roles: user.roles.map((role) => role.name)
-                    };
-
-                    this.setAuthData(accessToken, refreshToken, userInfo);
-                    console.log('✅ Login exitoso');
-                } else {
-                    throw new Error(response.message || 'Error en el login');
-                }
-            }),
-            catchError((error) => {
-                console.error('❌ Error en login:', error);
-                this.clearAuth();
-                return throwError(() => error);
-            })
-        );
-    }
-
-    register(data: RegisterRequest): Observable<ApiResponse> {
-        return this.http.post<ApiResponse>(`${environment.apiUrl}auth/register`, data);
-    }
-
-    refreshToken(): Observable<RefreshTokenResponse> {
+    refreshToken(): Observable<ApiResponse<AuthResponse>> {
         const refreshToken = this.getRefreshToken();
-
         if (!refreshToken) {
-            return throwError(() => new Error('No refresh token available'));
+            return throwError(() => new Error('No hay refresh token'));
         }
-
-        const request: RefreshTokenRequest = { refreshToken };
-
-        return this.http.post<RefreshTokenResponse>(`${environment.apiUrl}auth/refresh`, request).pipe(
-            tap((response) => {
-                if (response.success && response.data) {
-                    this.setAccessToken(response.data.accessToken);
+        return this.http.post<ApiResponse<AuthResponse>>(`${this.API}/refresh`, { refreshToken }).pipe(
+            tap((res) => {
+                if (res.success && res.data) {
+                    this.storeSession(res.data);
                 }
             }),
-            catchError((error) => {
-                this.logout();
-                return throwError(() => error);
-            })
+            catchError((err) => throwError(() => err))
         );
     }
 
+    /**
+     * POST /api/v1/auth/change-password
+     */
+    changePassword(request: ChangePasswordRequest): Observable<ApiResponse<void>> {
+        return this.http.post<ApiResponse<void>>(`${this.API}/change-password`, request).pipe(catchError((err) => throwError(() => err)));
+    }
+
+    /**
+     * POST /api/v1/auth/logout
+     * Limpia localStorage y redirige al login.
+     */
     logout(): void {
-        this.clearAuth();
+        this.http.post<ApiResponse<void>>(`${this.API}/logout`, {}).subscribe({ error: () => {} }); // fire & forget — limpiar igual si falla
+        this.clearSession();
         this.router.navigate(['/auth/login']);
-        this.http.post(`${environment.apiUrl}auth/logout`, {}).subscribe((response) => {
-            console.log(response);
-        });
     }
 
-    private setAuthData(accessToken: string, refreshToken: string, user: UserInfo): void {
-        console.log('💾 Guardando datos de autenticación:', {
-            user,
-            hasAccessToken: !!accessToken,
-            hasRefreshToken: !!refreshToken
-        });
+    // ── Session storage ───────────────────────────────────────────────────────
 
-        localStorage.setItem(this.ACCESS_TOKEN_KEY, accessToken);
-        localStorage.setItem(this.REFRESH_TOKEN_KEY, refreshToken);
-        localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+    private storeSession(data: AuthResponse): void {
+        // ── access_token: backend devuelve "accessToken" (no "token") ─────────
+        localStorage.setItem(KEY_ACCESS_TOKEN, data.accessToken);
+        localStorage.setItem(KEY_REFRESH_TOKEN, data.refreshToken);
 
-        this.currentUserSubject.next(user);
-        this.isAuthenticated.set(true);
+        // ── user_info ─────────────────────────────────────────────────────────
+        // El backend puede devolver roles[] vacío para superAdmin.
+        // En ese caso extraemos idCompany del JWT payload directamente.
+        const jwtPayload = this.decodeToken(data.accessToken);
+        // const idCompanyFromJwt: number | undefined =
+        //     (jwtPayload?.idCompany as number | undefined) ??
+        //     (jwtPayload?.companyId as number | undefined);
 
-        console.log('✅ Estado de autenticación actualizado');
+        const userInfo = {
+            ...data.user,
+            roles: data.user.roles ?? [],
+            // idCompany auxiliar: roles[0] > JWT > fallback 1 (superAdmin)
+            idCompany: data.user.roles?.[0]?.idCompany ?? 1
+        };
+        localStorage.setItem(KEY_USER_INFO, JSON.stringify(userInfo));
     }
 
-    private clearAuth(): void {
-        localStorage.removeItem(this.ACCESS_TOKEN_KEY);
-        localStorage.removeItem(this.REFRESH_TOKEN_KEY);
-        localStorage.removeItem(this.USER_KEY);
-
-        this.currentUserSubject.next(null);
-        this.isAuthenticated.set(false);
+    private clearSession(): void {
+        localStorage.removeItem(KEY_ACCESS_TOKEN);
+        localStorage.removeItem(KEY_REFRESH_TOKEN);
+        localStorage.removeItem(KEY_USER_INFO);
     }
 
+    // ── Getters usados por interceptor, guard y componentes ───────────────────
+
+    /**
+     * Usado por el interceptor → authService.getAccessToken()
+     */
     getAccessToken(): string | null {
-        return localStorage.getItem(this.ACCESS_TOKEN_KEY);
+        return localStorage.getItem(KEY_ACCESS_TOKEN);
     }
 
     getRefreshToken(): string | null {
-        return localStorage.getItem(this.REFRESH_TOKEN_KEY);
+        return localStorage.getItem(KEY_REFRESH_TOKEN);
     }
 
-    private setAccessToken(token: string): void {
-        localStorage.setItem(this.ACCESS_TOKEN_KEY, token);
-    }
-
-    private getStoredUser(): UserInfo | null {
-        const userStr = localStorage.getItem(this.USER_KEY);
-        return userStr ? JSON.parse(userStr) : null;
-    }
-
-    getCurrentUser(): UserInfo | null {
-        return this.currentUserSubject.value;
-    }
-
-    isTokenExpired(token: string): boolean {
+    getUserInfo(): UserInfoResponse | null {
+        const stored = localStorage.getItem(KEY_USER_INFO);
+        if (!stored) return null;
         try {
-            const payload = this.decodeToken(token);
-            if (!payload || !payload.exp) {
-                return true;
-            }
-
-            const expirationDate = new Date(payload.exp * 1000);
-            return expirationDate <= new Date();
-        } catch (error) {
-            return true;
-        }
-    }
-
-    private decodeToken(token: string): JwtPayload | null {
-        try {
-            const parts = token.split('.');
-            if (parts.length !== 3) {
-                return null;
-            }
-
-            const payload = parts[1];
-            const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
-            return JSON.parse(decoded);
-        } catch (error) {
-            console.error('❌ Error decodificando token:', error);
+            return JSON.parse(stored);
+        } catch {
             return null;
         }
     }
 
-    hasRole(role: string): boolean {
-        const user = this.getCurrentUser();
-        return user?.roles?.includes(role) || false;
-    }
+    // ── Token utils (usados por authGuard / noAuthGuard) ──────────────────────
 
-    hasAnyRole(roles: string[]): boolean {
-        const user = this.getCurrentUser();
-        if (!user?.roles) {
-            return false;
+    /**
+     * Decodifica el payload del JWT sin librerías externas.
+     */
+    decodeToken(token: string): JwtPayload | null {
+        try {
+            const payload = token.split('.')[1];
+            return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+        } catch {
+            return null;
         }
-        return roles.some((role) => user.roles.includes(role));
     }
 
-    // En auth.service.ts
-    getUserRole(): string | null {
-        const user = this.getCurrentUser();
-        return user?.roles?.[0] || null;
+    /**
+     * Usado por authGuard → authService.isTokenExpired(token)
+     */
+    isTokenExpired(token: string): boolean {
+        const decoded = this.decodeToken(token);
+        if (!decoded?.exp) return true;
+        // exp en segundos → comparar con Date.now() en ms
+        return decoded.exp * 1000 < Date.now();
     }
 
-    getUserRoles(): string[] {
-        const user = this.getCurrentUser();
-        return user?.roles || [];
+    // ── Getters de conveniencia ───────────────────────────────────────────────
+
+    isLoggedIn(): boolean {
+        const token = this.getAccessToken();
+        return !!token && !this.isTokenExpired(token);
+    }
+
+    get username(): string | null {
+        return this.getUserInfo()?.username ?? null;
+    }
+
+    get email(): string | null {
+        return this.getUserInfo()?.email ?? null;
+    }
+
+    get isSuperAdmin(): boolean {
+        return this.getUserInfo()?.isSuperAdmin ?? false;
+    }
+
+    get idUser(): number | null {
+        return this.getUserInfo()?.id ?? null; // Java: id (no idUser)
+    }
+
+    /** idCompany: lee el campo auxiliar guardado en storeSession */
+    get idCompany(): number | null {
+        const info = this.getUserInfo() as any;
+        if (!info) return null;
+        // 1. Campo auxiliar guardado en storeSession (roles[0].idCompany o JWT)
+        if (info.idCompany) return info.idCompany as number;
+        // 2. Fallback: roles como RoleInfo[]
+        if (Array.isArray(info.roles) && info.roles[0]?.idCompany) {
+            return info.roles[0].idCompany as number;
+        }
+        return null;
+    }
+
+    /** Roles como string[] — compatibles con roleGuard */
+    get roleNames(): string[] {
+        return this.getUserInfo()?.roles?.map((r: any) => (typeof r === 'string' ? r : (r.name ?? r.roleName))) ?? [];
+    }
+
+    hasRole(role: string): boolean {
+        return this.roleNames.some((r) => r.toLowerCase() === role.toLowerCase());
+    }
+
+    // ── Alias legacy (compatibilidad con código existente) ────────────────────
+
+    /** @deprecated usar getAccessToken() */
+    get token(): string | null {
+        return this.getAccessToken();
+    }
+
+    /** @deprecated usar roleNames */
+    get tipo(): number | null {
+        return this.isSuperAdmin ? 1 : 0;
     }
 }

@@ -1,4 +1,5 @@
 // src/app/modules/students/students.component.ts
+
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -15,46 +16,29 @@ import { TooltipModule } from 'primeng/tooltip';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
-import { StudentMock } from '../../shared/data/people.mock';
-import { StudentsService, StudentFilter } from '../../core/services/conf/students.service';
-import { AcademicsService } from '../../core/services/conf/academics.service';
-import { GradeMock } from '../../shared/data/academic.mock';
+import { StudentsService } from '../../core/services/api/students.service';
+import { AuthService } from '../../core/services/api/auth.service';
 import { StudentFormDialogComponent } from '../../shared/components/student/student-form-dialog/student-form-dialog.component';
 import { StudentDetailDialogComponent } from '../../shared/components/student/student-detail-dialog/student-detail-dialog.component';
-
-// Componentes modales (shared)
+import { StudentFilter, StudentResponse } from '../../core/models/student.dto';
+import { AcademicsService } from '../../core/services/api/academics.service';
 
 @Component({
     selector: 'app-students',
     standalone: true,
-    imports: [
-        CommonModule,
-        FormsModule,
-        InputTextModule,
-        ToastModule,
-        ConfirmDialogModule,
-        TagModule,
-        SelectModule,
-        TableModule,
-        SkeletonModule,
-        ButtonModule,
-        TooltipModule,
-        // Dialogs
-        StudentFormDialogComponent,
-        StudentDetailDialogComponent
-    ],
+    imports: [CommonModule, FormsModule, InputTextModule, ToastModule, ConfirmDialogModule, TagModule, SelectModule, TableModule, SkeletonModule, ButtonModule, TooltipModule, StudentFormDialogComponent, StudentDetailDialogComponent],
     templateUrl: './students.component.html',
     styleUrl: './students.component.scss',
     providers: [ConfirmationService, MessageService]
 })
 export class StudentsComponent implements OnInit, OnDestroy {
-    students = signal<StudentMock[]>([]);
+    students = signal<StudentResponse[]>([]);
     loading = signal(false);
-    grades = signal<GradeMock[]>([]);
+    grades = signal<{ idGrade: number; name: string }[]>([]);
 
-    // Paginación
+    // Paginación server-side
     totalRecords = signal(0);
-    page = 1;
+    page = 0; // backend usa 0-based
     pageSize = 10;
     pageSizeOptions = [5, 10, 25, 50];
 
@@ -72,7 +56,7 @@ export class StudentsComponent implements OnInit, OnDestroy {
         { label: 'Retirado', value: 'WITHDRAWN' }
     ];
 
-    // Control de modales
+    // Modales
     showFormDialog = signal(false);
     showDetailDialog = signal(false);
     selectedStudentId = signal<number | null>(null);
@@ -82,6 +66,7 @@ export class StudentsComponent implements OnInit, OnDestroy {
     constructor(
         private studentsService: StudentsService,
         private academicsService: AcademicsService,
+        private authService: AuthService,
         private confirmationService: ConfirmationService,
         private messageService: MessageService
     ) {}
@@ -99,35 +84,60 @@ export class StudentsComponent implements OnInit, OnDestroy {
     // ── Data Loading ──────────────────────────────────────────────────────────
 
     loadGrades(): void {
+        const idCompany = this.authService.idCompany || 1;
+        console.log('LLega aqui');
+
+        if (!idCompany) return;
+
         this.academicsService
-            .getGrades()
+            .getGrades(idCompany)
             .pipe(takeUntil(this.destroy$))
-            .subscribe((grades) => {
-                this.grades.set(grades);
+            .subscribe({
+                next: (res) => {
+                    if (res.success && res.data) {
+                        this.grades.set(
+                            res.data.map((g: any) => ({
+                                idGrade: g.idGrade,
+                                name: g.name
+                            }))
+                        );
+                    }
+                }
+                // error: () => {} // sin grados no bloquea la pantalla
             });
     }
 
     loadStudents(): void {
+        const idCompany = this.authService.idCompany || 1;
+        if (!idCompany) return;
+
         this.loading.set(true);
 
-        const filters: StudentFilter = {};
-        if (this.searchQuery) filters.search = this.searchQuery;
-        if (this.selectedGrade) filters.idGrade = this.selectedGrade;
-        if (this.selectedStatus) filters.status = this.selectedStatus;
+        const filters: StudentFilter = {
+            page: this.page,
+            size: this.pageSize,
+            search: this.searchQuery || undefined,
+            status: this.selectedStatus || undefined,
+            idGrade: this.selectedGrade || undefined
+        };
 
         this.studentsService
-            .getAll(filters)
+            .getAll(idCompany, filters)
             .pipe(takeUntil(this.destroy$))
             .subscribe({
-                next: (data) => {
-                    // Paginación local
-                    this.totalRecords.set(data.length);
-                    const start = (this.page - 1) * this.pageSize;
-                    this.students.set(data.slice(start, start + this.pageSize));
+                next: (res) => {
+                    if (res.success && res.data) {
+                        this.students.set(res.data.content);
+                        this.totalRecords.set(res.data.totalElements);
+                    }
                     this.loading.set(false);
                 },
                 error: () => {
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los estudiantes' });
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: 'No se pudieron cargar los estudiantes'
+                    });
                     this.loading.set(false);
                 }
             });
@@ -136,12 +146,12 @@ export class StudentsComponent implements OnInit, OnDestroy {
     // ── Filtros ───────────────────────────────────────────────────────────────
 
     onSearch(): void {
-        this.page = 1;
+        this.page = 0;
         this.loadStudents();
     }
 
     onFilterChange(): void {
-        this.page = 1;
+        this.page = 0;
         this.loadStudents();
     }
 
@@ -149,29 +159,29 @@ export class StudentsComponent implements OnInit, OnDestroy {
         this.searchQuery = '';
         this.selectedGrade = null;
         this.selectedStatus = null;
-        this.page = 1;
+        this.page = 0;
         this.loadStudents();
     }
 
     onPageChange(event: TableLazyLoadEvent): void {
-        this.page = (event.first ?? 0) / (event.rows ?? 10) + 1;
+        this.page = Math.floor((event.first ?? 0) / (event.rows ?? 10));
         this.pageSize = event.rows ?? 10;
         this.loadStudents();
     }
 
-    // ── Acciones de tabla ─────────────────────────────────────────────────────
+    // ── Acciones ──────────────────────────────────────────────────────────────
 
     openCreate(): void {
         this.selectedStudentId.set(null);
         this.showFormDialog.set(true);
     }
 
-    openEdit(student: StudentMock): void {
+    openEdit(student: StudentResponse): void {
         this.selectedStudentId.set(student.idStudent);
         this.showFormDialog.set(true);
     }
 
-    openDetail(student: StudentMock): void {
+    openDetail(student: StudentResponse): void {
         this.selectedStudentId.set(student.idStudent);
         this.showDetailDialog.set(true);
     }
@@ -189,48 +199,73 @@ export class StudentsComponent implements OnInit, OnDestroy {
     onFormClosed(): void {
         this.showFormDialog.set(false);
     }
-
     onDetailClosed(): void {
         this.showDetailDialog.set(false);
     }
 
-    toggleStatus(student: StudentMock): void {
+    toggleStatus(student: StudentResponse): void {
         const newStatus = student.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
         const actionLabel = newStatus === 'ACTIVE' ? 'activar' : 'desactivar';
 
         this.confirmationService.confirm({
-            message: `¿Deseas ${actionLabel} a <strong>${student.fullName}</strong>?`,
+            message: `¿Deseas ${actionLabel} a <strong>${student.person.fullName}</strong>?`,
             header: 'Cambiar Estado',
             icon: 'pi pi-question-circle',
             acceptLabel: 'Sí, cambiar',
             rejectLabel: 'Cancelar',
             acceptButtonStyleClass: 'p-button-primary',
             accept: () => {
-                // Actualización local (DEMO)
-                const updated = this.students().map((s) => (s.idStudent === student.idStudent ? { ...s, status: newStatus } : s));
-                this.students.set(updated);
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Estado actualizado',
-                    detail: `${student.fullName} → ${newStatus === 'ACTIVE' ? 'Activo' : 'Inactivo'}`
-                });
+                this.studentsService
+                    .update(student.idStudent, { status: newStatus })
+                    .pipe(takeUntil(this.destroy$))
+                    .subscribe({
+                        next: () => {
+                            this.loadStudents();
+                            this.messageService.add({
+                                severity: 'success',
+                                summary: 'Estado actualizado',
+                                detail: `${student.person.fullName} → ${newStatus === 'ACTIVE' ? 'Activo' : 'Inactivo'}`
+                            });
+                        },
+                        error: () =>
+                            this.messageService.add({
+                                severity: 'error',
+                                summary: 'Error',
+                                detail: 'No se pudo actualizar el estado'
+                            })
+                    });
             }
         });
     }
 
-    deleteStudent(student: StudentMock): void {
+    deleteStudent(student: StudentResponse): void {
         this.confirmationService.confirm({
-            message: `¿Estás seguro de eliminar a <strong>${student.fullName}</strong>? Esta acción no se puede deshacer.`,
+            message: `¿Estás seguro de eliminar a <strong>${student.person.fullName}</strong>? Esta acción no se puede deshacer.`,
             header: 'Confirmar Eliminación',
             icon: 'pi pi-exclamation-triangle',
             acceptLabel: 'Sí, eliminar',
             rejectLabel: 'Cancelar',
             acceptButtonStyleClass: 'p-button-danger',
             accept: () => {
-                // Eliminación local (DEMO)
-                this.students.set(this.students().filter((s) => s.idStudent !== student.idStudent));
-                this.totalRecords.update((v) => v - 1);
-                this.messageService.add({ severity: 'success', summary: 'Eliminado', detail: `${student.fullName} eliminado correctamente` });
+                this.studentsService
+                    .delete(student.idStudent)
+                    .pipe(takeUntil(this.destroy$))
+                    .subscribe({
+                        next: () => {
+                            this.loadStudents();
+                            this.messageService.add({
+                                severity: 'success',
+                                summary: 'Eliminado',
+                                detail: `${student.person.fullName} eliminado correctamente`
+                            });
+                        },
+                        error: () =>
+                            this.messageService.add({
+                                severity: 'error',
+                                summary: 'Error',
+                                detail: 'No se pudo eliminar el estudiante'
+                            })
+                    });
             }
         });
     }
@@ -239,7 +274,7 @@ export class StudentsComponent implements OnInit, OnDestroy {
         this.messageService.add({
             severity: 'info',
             summary: 'Exportar',
-            detail: 'En producción se exportará el listado de estudiantes en Excel'
+            detail: 'Función de exportación disponible próximamente'
         });
     }
 

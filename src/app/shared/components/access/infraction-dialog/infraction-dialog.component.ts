@@ -1,4 +1,5 @@
 // src/app/shared/components/access/infraction-dialog/infraction-dialog.component.ts
+
 import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -12,9 +13,10 @@ import { TextareaModule } from 'primeng/textarea';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { TagModule } from 'primeng/tag';
 
-import { AccessControlService, InfractionRequest } from '../../../../core/services/conf/access-control.service';
-import { StudentMock } from '../../../../shared/data/people.mock';
-import { InfractionTypeMock } from '../../../../shared/data/operations.mock';
+import { AccessControlService, InfractionRequest } from '../../../../core/services/api/access-control.service';
+import { AuthService } from '../../../../core/services/api/auth.service';
+import { InfractionTypeResponse } from '../../../../core/models/operations.models';
+import { StudentResponse } from '../../../../core/models/student.dto';
 
 @Component({
     selector: 'app-infraction-dialog',
@@ -24,7 +26,7 @@ import { InfractionTypeMock } from '../../../../shared/data/operations.mock';
     styleUrl: './infraction-dialog.component.scss'
 })
 export class InfractionDialogComponent implements OnChanges, OnInit {
-    @Input() students: StudentMock[] = [];
+    @Input() students: StudentResponse[] = [];
     @Input() visible = false;
 
     @Output() onSave = new EventEmitter<void>();
@@ -32,27 +34,32 @@ export class InfractionDialogComponent implements OnChanges, OnInit {
 
     form!: FormGroup;
     loading = signal(false);
-    infractionTypes = signal<InfractionTypeMock[]>([]);
+    infractionTypes = signal<InfractionTypeResponse[]>([]);
     selectedSeverity = signal<string>('');
 
     constructor(
         private fb: FormBuilder,
-        private accessService: AccessControlService
+        private accessService: AccessControlService,
+        private authService: AuthService
     ) {
         this.buildForm();
     }
 
     ngOnInit(): void {
-        this.accessService.getInfractionTypes().subscribe((types) => this.infractionTypes.set(types));
+        const idCompany = this.authService.idCompany;
+        if (!idCompany) return;
+
+        this.accessService.getInfractionTypes(idCompany).subscribe({
+            next: (res) => {
+                if (res.success) this.infractionTypes.set(res.data ?? []);
+            }
+        });
     }
 
     ngOnChanges(changes: SimpleChanges): void {
         if (changes['visible']?.currentValue === true) {
             this.form.reset();
-            this.form.patchValue({
-                incidentDate: new Date(),
-                parentNotified: false
-            });
+            this.form.patchValue({ incidentDate: new Date(), parentNotified: false });
             this.selectedSeverity.set('');
         }
     }
@@ -67,7 +74,7 @@ export class InfractionDialogComponent implements OnChanges, OnInit {
             parentNotified: [false]
         });
 
-        // Cuando cambia el tipo, mostrar la severidad
+        // Mostrar severidad al cambiar el tipo
         this.form.get('idInfractionType')?.valueChanges.subscribe((id) => {
             const found = this.infractionTypes().find((t) => t.idInfractionType === id);
             this.selectedSeverity.set(found?.severity ?? '');
@@ -123,15 +130,27 @@ export class InfractionDialogComponent implements OnChanges, OnInit {
     }
 
     getSeverityLabel(s: string): string {
-        const map: Record<string, string> = { LOW: 'Leve', MEDIUM: 'Moderada', HIGH: 'Grave', CRITICAL: 'Crítica' };
+        const map: Record<string, string> = {
+            LOW: 'Leve',
+            MEDIUM: 'Moderada',
+            HIGH: 'Grave',
+            CRITICAL: 'Crítica'
+        };
         return map[s] ?? s;
     }
 
+    // StudentResponse: fullName en person.fullName, gradeName/sectionName directos
     get studentOptions(): { label: string; value: number }[] {
-        return this.students.map((s) => ({ label: `${s.fullName} — ${s.gradeName} ${s.sectionName}`, value: s.idStudent }));
+        return this.students.map((s) => ({
+            label: `${s.person.fullName} — ${s.gradeName ?? ''} ${s.sectionName ?? ''}`.trimEnd(),
+            value: s.idStudent
+        }));
     }
 
     get typeOptions(): { label: string; value: number }[] {
-        return this.infractionTypes().map((t) => ({ label: t.name, value: t.idInfractionType }));
+        return this.infractionTypes().map((t) => ({
+            label: t.name,
+            value: t.idInfractionType
+        }));
     }
 }

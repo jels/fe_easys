@@ -1,4 +1,5 @@
 // src/app/modules/dashboard/dashboard.component.ts
+
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
@@ -9,8 +10,31 @@ import { TooltipModule } from 'primeng/tooltip';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
-import { EventMock } from '../../shared/data/operations.mock';
-import { DashboardAlert, DashboardService, DashboardStats, RecentActivity } from '../../core/services/conf/dashboard.service';
+// Services
+import { DashboardService } from '../../core/services/api/dashboard.service';
+import { EventsService } from '../../core/services/api/events.service';
+import { AuthService } from '../../core/services/api/auth.service';
+
+// Models
+import { DashboardStatsResponse } from '../../core/models/dashboard.models';
+import { EventResponse } from '../../core/models/events.models';
+
+// ── Tipos locales (reemplazan los mocks del service anterior) ─────────────────
+
+export interface DashboardAlert {
+    type: 'danger' | 'warn' | 'info';
+    icon: string;
+    title: string;
+    message: string;
+}
+
+export interface RecentActivity {
+    icon: string;
+    color: string;
+    title: string;
+    detail: string;
+    time: string;
+}
 
 interface QuickAction {
     label: string;
@@ -21,6 +45,8 @@ interface QuickAction {
     desc: string;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+
 @Component({
     selector: 'app-dashboard',
     standalone: true,
@@ -29,10 +55,10 @@ interface QuickAction {
     styleUrl: './dashboard.component.scss'
 })
 export class DashboardComponent implements OnInit, OnDestroy {
-    stats = signal<DashboardStats | null>(null);
+    stats = signal<DashboardStatsResponse | null>(null);
     alerts = signal<DashboardAlert[]>([]);
     activity = signal<RecentActivity[]>([]);
-    upcomingEvents = signal<EventMock[]>([]);
+    upcomingEvents = signal<EventResponse[]>([]);
 
     loadingStats = signal(true);
     loadingAlerts = signal(true);
@@ -54,40 +80,53 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     constructor(
         private dashboardService: DashboardService,
+        private eventsService: EventsService,
+        private authService: AuthService,
         private router: Router
     ) {}
 
     ngOnInit(): void {
+        const idCompany = this.authService.idCompany;
+        if (!idCompany) return;
+
+        // Una sola llamada al backend para todas las stats
         this.dashboardService
-            .getStats()
+            .getStats(idCompany)
             .pipe(takeUntil(this.destroy$))
-            .subscribe((s) => {
-                this.stats.set(s);
-                this.loadingStats.set(false);
+            .subscribe({
+                next: (res) => {
+                    if (res.success && res.data) {
+                        this.stats.set(res.data);
+                        this.alerts.set(this.buildAlerts(res.data));
+                        this.activity.set(this.buildActivity(res.data));
+                    }
+                    this.loadingStats.set(false);
+                    this.loadingAlerts.set(false);
+                    this.loadingActivity.set(false);
+                },
+                error: () => {
+                    this.loadingStats.set(false);
+                    this.loadingAlerts.set(false);
+                    this.loadingActivity.set(false);
+                }
             });
 
-        this.dashboardService
-            .getAlerts()
-            .pipe(takeUntil(this.destroy$))
-            .subscribe((a) => {
-                this.alerts.set(a);
-                this.loadingAlerts.set(false);
-            });
+        // Eventos próximos — rango de los próximos 30 días
+        const today = new Date();
+        const in30days = new Date(today);
+        in30days.setDate(today.getDate() + 30);
+        const dateFrom = today.toISOString().split('T')[0];
+        const dateTo = in30days.toISOString().split('T')[0];
 
-        this.dashboardService
-            .getRecentActivity()
+        this.eventsService
+            .getEvents(idCompany, { dateFrom, dateTo, size: 5 })
             .pipe(takeUntil(this.destroy$))
-            .subscribe((a) => {
-                this.activity.set(a);
-                this.loadingActivity.set(false);
-            });
-
-        this.dashboardService
-            .getUpcomingEvents()
-            .pipe(takeUntil(this.destroy$))
-            .subscribe((e) => {
-                this.upcomingEvents.set(e);
-                this.loadingEvents.set(false);
+            .subscribe({
+                next: (res) => {
+                    this.upcomingEvents.set(res.success ? (res.data?.content ?? []) : []);
+                    this.loadingEvents.set(false);
+                },
+                error: () => this.loadingEvents.set(false)
             });
     }
 
@@ -96,37 +135,132 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.destroy$.complete();
     }
 
+    // ── Builders client-side ──────────────────────────────────────────────────
+
+    private buildAlerts(s: DashboardStatsResponse): DashboardAlert[] {
+        const alerts: DashboardAlert[] = [];
+
+        if (s.overdueCount > 0) {
+            alerts.push({
+                type: 'danger',
+                icon: 'pi pi-exclamation-circle',
+                title: 'Cuotas vencidas',
+                message: `${s.overdueCount} cuota${s.overdueCount > 1 ? 's' : ''} sin cobrar`
+            });
+        }
+        if (s.criticalInfractions > 0) {
+            alerts.push({
+                type: 'danger',
+                icon: 'pi pi-ban',
+                title: 'Infracciones críticas',
+                message: `${s.criticalInfractions} infracción${s.criticalInfractions > 1 ? 'es' : ''} pendiente${s.criticalInfractions > 1 ? 's' : ''} de resolución`
+            });
+        }
+        if (s.attendanceRate < 80) {
+            alerts.push({
+                type: 'warn',
+                icon: 'pi pi-user-minus',
+                title: 'Asistencia baja',
+                message: `Tasa de asistencia hoy: ${s.attendanceRate.toFixed(1)}%`
+            });
+        }
+        if (s.pendingNotifications > 0) {
+            alerts.push({
+                type: 'warn',
+                icon: 'pi pi-bell',
+                title: 'Notificaciones pendientes',
+                message: `${s.pendingNotifications} notificación${s.pendingNotifications > 1 ? 'es' : ''} sin enviar`
+            });
+        }
+        if (s.upcomingEvents > 0) {
+            alerts.push({
+                type: 'info',
+                icon: 'pi pi-calendar',
+                title: 'Eventos próximos',
+                message: `${s.upcomingEvents} evento${s.upcomingEvents > 1 ? 's' : ''} programado${s.upcomingEvents > 1 ? 's' : ''} esta semana`
+            });
+        }
+        if (s.earlyDeparturesToday > 0) {
+            alerts.push({
+                type: 'info',
+                icon: 'pi pi-sign-out',
+                title: 'Retiros anticipados',
+                message: `${s.earlyDeparturesToday} alumno${s.earlyDeparturesToday > 1 ? 's' : ''} retirado${s.earlyDeparturesToday > 1 ? 's' : ''} hoy`
+            });
+        }
+        return alerts;
+    }
+
+    private buildActivity(s: DashboardStatsResponse): RecentActivity[] {
+        const acts: RecentActivity[] = [];
+        const now = 'Hoy';
+
+        if (s.presentToday > 0) {
+            acts.push({
+                icon: 'pi pi-check-circle',
+                color: '#059669',
+                title: 'Asistencia registrada',
+                detail: `${s.presentToday} alumnos presentes hoy`,
+                time: now
+            });
+        }
+        if (s.lateToday > 0) {
+            acts.push({
+                icon: 'pi pi-clock',
+                color: '#d97706',
+                title: 'Tardanzas',
+                detail: `${s.lateToday} alumno${s.lateToday > 1 ? 's' : ''} con tardanza hoy`,
+                time: now
+            });
+        }
+        if (s.qrEntradasToday > 0) {
+            acts.push({
+                icon: 'pi pi-qrcode',
+                color: '#6366f1',
+                title: 'Accesos QR',
+                detail: `${s.qrEntradasToday} entradas registradas vía QR`,
+                time: now
+            });
+        }
+        if (s.collectedThisMonth > 0) {
+            acts.push({
+                icon: 'pi pi-credit-card',
+                color: '#0ea5e9',
+                title: 'Cobros del mes',
+                detail: `Gs. ${s.collectedThisMonth.toLocaleString('es-PY')} recaudados`,
+                time: 'Este mes'
+            });
+        }
+        return acts;
+    }
+
+    // ── Navegación ────────────────────────────────────────────────────────────
+
     navigate(route: string): void {
         this.router.navigate([route]);
     }
 
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
     getAlertSeverity(type: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
-        const m: Record<string, 'success' | 'info' | 'warn' | 'danger' | 'secondary'> = {
-            danger: 'danger',
-            warn: 'warn',
-            info: 'info'
-        };
-        return m[type] ?? 'secondary';
+        return (['danger', 'warn', 'info'] as const).includes(type as any) ? (type as 'danger' | 'warn' | 'info') : 'secondary';
     }
 
     getEventStatusSeverity(s: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
-        const m: Record<string, 'success' | 'info' | 'warn' | 'danger' | 'secondary'> = {
-            PLANNED: 'info',
-            ACTIVE: 'success',
-            COMPLETED: 'secondary',
-            CANCELLED: 'danger'
-        };
-        return m[s] ?? 'secondary';
+        return (
+            (
+                {
+                    PLANNED: 'info',
+                    ACTIVE: 'success',
+                    COMPLETED: 'secondary',
+                    CANCELLED: 'danger'
+                } as Record<string, 'success' | 'info' | 'warn' | 'danger' | 'secondary'>
+            )[s] ?? 'secondary'
+        );
     }
 
     getEventStatusLabel(s: string): string {
-        const m: Record<string, string> = {
-            PLANNED: 'Planificado',
-            ACTIVE: 'Activo',
-            COMPLETED: 'Completado',
-            CANCELLED: 'Cancelado'
-        };
-        return m[s] ?? s;
+        return ({ PLANNED: 'Planificado', ACTIVE: 'Activo', COMPLETED: 'Completado', CANCELLED: 'Cancelado' } as Record<string, string>)[s] ?? s;
     }
 
     get currentDate(): string {

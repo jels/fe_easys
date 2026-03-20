@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { BaseApiService } from './base-api.service';
 import { ApiResponse } from '../../models/api-response.model';
-import { ParentDTO, ParentRequest, StudentParentDTO, StudentParentRequest } from '../../models/dto/parent.dto';
+import { ParentDTO, ParentRequest, StudentParentDTO, StudentParentRequest } from '../../models/parent.dto';
 
 @Injectable({ providedIn: 'root' })
 export class ParentsApiService extends BaseApiService {

@@ -1,6 +1,7 @@
 // src/app/modules/academic/academic.component.ts
+
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, signal, computed } from '@angular/core';
+import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -15,13 +16,15 @@ import { TooltipModule } from 'primeng/tooltip';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
-import { AcademicService } from '../../core/services/conf/academic.service';
-import { MOCK_SCHOOL_YEARS, MOCK_SCHOOL_PERIODS, MOCK_GRADES, MOCK_SECTIONS, MOCK_SUBJECTS, SchoolYearMock, SchoolPeriodMock, GradeMock, SectionMock, SubjectMock, ScheduleMock, GradeScoreExMock } from '../../shared/data/academic.mock';
-import { StudentMock } from '../../shared/data/people.mock';
+import { AcademicsService } from '../../core/services/api/academics.service';
+import { AuthService } from '../../core/services/api/auth.service';
+import { GradeResponse, SectionResponse, SubjectResponse, SchoolPeriodResponse, SchoolYearResponse, ClassScheduleResponse, GradeScoreResponse, AcademicStatsResponse, UpsertGradeScoreRequest } from '../../core/models/academic.models';
+import { StudentResponse } from '../../core/models/student.dto';
 
 // ── Estructura interna para la grilla de notas ────────────────────────────────
+
 interface ScoreCell {
-    score: number | null; // null = sin nota
+    score: number | null;
     idGradeScore?: number;
     editing: boolean;
     saving: boolean;
@@ -34,18 +37,19 @@ interface SubjectRow {
     subjectCode: string;
     cells: Map<number, ScoreCell>; // key = idSchoolPeriod
     yearAvg: number | null;
-    failedLastPeriod: boolean; // nota 1 en el último período
-    failedYearAvg: boolean; // promedio año < 2
+    failedLastPeriod: boolean;
+    failedYearAvg: boolean;
 }
 
 interface StudentGradeGrid {
-    student: StudentMock;
+    student: StudentResponse;
+    idEnrollment: number | null; // idStudentEnrollment del backend
     rows: SubjectRow[];
-    periodAvgs: Map<number, number | null>; // key = idSchoolPeriod
+    periodAvgs: Map<number, number | null>;
     generalAvg: number | null;
     expanded: boolean;
-    isReprobado: boolean; // true si alguna condición de reprobación se cumple
-    failedSubjects: string[]; // nombres de materias reprobadas
+    isReprobado: boolean;
+    failedSubjects: string[];
 }
 
 @Component({
@@ -60,26 +64,27 @@ export class AcademicComponent implements OnInit, OnDestroy {
     activeTab = signal('0');
 
     // ── Datos de referencia ───────────────────────────────────────────────────
-    grades = signal<GradeMock[]>([]);
-    sections = signal<SectionMock[]>([]);
-    subjects = signal<SubjectMock[]>([]);
-    periods = signal<SchoolPeriodMock[]>([]);
-    schoolYears = signal<SchoolYearMock[]>([]);
-    schedules = signal<ScheduleMock[]>([]);
-    stats = signal<any>(null);
+    grades = signal<GradeResponse[]>([]);
+    sections = signal<SectionResponse[]>([]);
+    allSections = signal<SectionResponse[]>([]); // para Tab horarios
+    subjects = signal<SubjectResponse[]>([]);
+    periods = signal<SchoolPeriodResponse[]>([]);
+    schoolYears = signal<SchoolYearResponse[]>([]);
+    schedules = signal<ClassScheduleResponse[]>([]);
+    stats = signal<AcademicStatsResponse | null>(null);
 
-    // ── Selectores Tab 1 ─────────────────────────────────────────────────────
-    selectedGrade: GradeMock | null = null;
-    selectedSection: SectionMock | null = null;
+    // ── Selectores Tab 1 ──────────────────────────────────────────────────────
+    selectedGrade: GradeResponse | null = null;
+    selectedSection: SectionResponse | null = null;
 
-    // ── Estado Tab 1 ─────────────────────────────────────────────────────────
-    sectionStudents = signal<StudentMock[]>([]);
+    // ── Estado Tab 1 ──────────────────────────────────────────────────────────
+    sectionStudents = signal<StudentResponse[]>([]);
     gradeGrids = signal<StudentGradeGrid[]>([]);
     loadingStudents = signal(false);
     loadingScores = signal<Record<number, boolean>>({});
 
     // ── Estado Tab 3 (Horarios) ───────────────────────────────────────────────
-    selectedSectionSchedule: SectionMock | null = null;
+    selectedSectionSchedule: SectionResponse | null = null;
     loadingSchedules = signal(false);
 
     readonly DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
@@ -87,7 +92,8 @@ export class AcademicComponent implements OnInit, OnDestroy {
     private destroy$ = new Subject<void>();
 
     constructor(
-        private academicService: AcademicService,
+        private academicService: AcademicsService,
+        private authService: AuthService,
         private messageService: MessageService
     ) {}
 
@@ -103,30 +109,75 @@ export class AcademicComponent implements OnInit, OnDestroy {
     // ── Carga de datos de referencia ──────────────────────────────────────────
 
     loadReferenceData(): void {
-        this.academicService
-            .getGrades()
-            .pipe(takeUntil(this.destroy$))
-            .subscribe((g) => this.grades.set(g));
+        const idCompany = this.authService.idCompany;
+        if (!idCompany) return;
 
+        // Grados
         this.academicService
-            .getSubjects()
+            .getGrades(idCompany)
             .pipe(takeUntil(this.destroy$))
-            .subscribe((s) => this.subjects.set(s));
+            .subscribe({
+                next: (res) => {
+                    if (res.success) this.grades.set(res.data ?? []);
+                }
+            });
 
+        // Materias
         this.academicService
-            .getPeriods(1) // Año lectivo activo
+            .getSubjects(idCompany)
             .pipe(takeUntil(this.destroy$))
-            .subscribe((p) => this.periods.set(p));
+            .subscribe({
+                next: (res) => {
+                    if (res.success) this.subjects.set(res.data ?? []);
+                }
+            });
 
+        // Períodos del año activo — primero cargamos años, luego períodos del activo
         this.academicService
-            .getSchoolYears()
+            .getSchoolYears(idCompany)
             .pipe(takeUntil(this.destroy$))
-            .subscribe((y) => this.schoolYears.set(y));
+            .subscribe({
+                next: (res) => {
+                    if (res.success && res.data) {
+                        this.schoolYears.set(res.data);
+                        const activeYear = res.data.find((y) => y.isActive);
+                        if (activeYear) {
+                            this.loadPeriods(activeYear.idSchoolYear);
+                        }
+                    }
+                }
+            });
 
+        // Todas las secciones (para Tab horarios)
         this.academicService
-            .getAcademicStats()
+            .getSections(idCompany)
             .pipe(takeUntil(this.destroy$))
-            .subscribe((s) => this.stats.set(s));
+            .subscribe({
+                next: (res) => {
+                    if (res.success) this.allSections.set(res.data ?? []);
+                }
+            });
+
+        // Stats académicas
+        this.academicService
+            .getStats(idCompany)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: (res) => {
+                    if (res.success) this.stats.set(res.data ?? null);
+                }
+            });
+    }
+
+    private loadPeriods(idSchoolYear: number): void {
+        this.academicService
+            .getPeriods(idSchoolYear)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: (res) => {
+                    if (res.success) this.periods.set(res.data ?? []);
+                }
+            });
     }
 
     // ── Tab 1: Notas ──────────────────────────────────────────────────────────
@@ -136,13 +187,19 @@ export class AcademicComponent implements OnInit, OnDestroy {
         this.sections.set([]);
         this.sectionStudents.set([]);
         this.gradeGrids.set([]);
-
         if (!this.selectedGrade) return;
 
+        const idCompany = this.authService.idCompany;
+        if (!idCompany) return;
+
         this.academicService
-            .getSections(this.selectedGrade.idGrade, 1)
+            .getSections(idCompany, { idGrade: this.selectedGrade.idGrade })
             .pipe(takeUntil(this.destroy$))
-            .subscribe((s) => this.sections.set(s));
+            .subscribe({
+                next: (res) => {
+                    if (res.success) this.sections.set(res.data ?? []);
+                }
+            });
     }
 
     onSectionChange(): void {
@@ -159,54 +216,64 @@ export class AcademicComponent implements OnInit, OnDestroy {
         this.academicService
             .getStudentsBySection(this.selectedSection.idSection)
             .pipe(takeUntil(this.destroy$))
-            .subscribe((students) => {
-                this.sectionStudents.set(students);
-                // Inicializar grids vacíos para cada alumno
-                const grids: StudentGradeGrid[] = students.map((s) => ({
-                    student: s,
-                    rows: [],
-                    periodAvgs: new Map(),
-                    generalAvg: null,
-                    expanded: false,
-                    isReprobado: false,
-                    failedSubjects: []
-                }));
-                this.gradeGrids.set(grids);
-                this.loadingStudents.set(false);
+            .subscribe({
+                next: (res) => {
+                    const students = res.success ? (res.data ?? []) : [];
+                    this.sectionStudents.set(students);
+
+                    const grids: StudentGradeGrid[] = students.map((s) => ({
+                        student: s,
+                        idEnrollment: null,
+                        rows: [],
+                        periodAvgs: new Map(),
+                        generalAvg: null,
+                        expanded: false,
+                        isReprobado: false,
+                        failedSubjects: []
+                    }));
+                    this.gradeGrids.set(grids);
+                    this.loadingStudents.set(false);
+                },
+                error: () => this.loadingStudents.set(false)
             });
     }
 
     toggleStudentExpansion(grid: StudentGradeGrid): void {
-        if (!grid.expanded) {
-            // Primera vez que se expande → cargar notas
-            if (grid.rows.length === 0) {
-                this.loadStudentScores(grid);
-            }
-            grid.expanded = true;
-        } else {
-            grid.expanded = false;
+        if (!grid.expanded && grid.rows.length === 0) {
+            this.loadStudentScores(grid);
         }
+        grid.expanded = !grid.expanded;
         this.gradeGrids.update((list) => [...list]);
     }
 
     loadStudentScores(grid: StudentGradeGrid): void {
+        if (!this.selectedSection) return;
         const idStudent = grid.student.idStudent;
-        const idSection = this.selectedSection!.idSection;
 
         this.loadingScores.update((s) => ({ ...s, [idStudent]: true }));
 
+        // El backend devuelve las notas de la sección completa —
+        // filtramos por alumno después de recibirlas
         this.academicService
-            .getScoresByStudentSection(idStudent, idSection)
+            .getScoresBySection(this.selectedSection.idSection)
             .pipe(takeUntil(this.destroy$))
-            .subscribe((scores) => {
-                grid.rows = this.buildSubjectRows(scores);
-                this.recalcAverages(grid);
-                this.loadingScores.update((s) => ({ ...s, [idStudent]: false }));
-                this.gradeGrids.update((list) => [...list]);
+            .subscribe({
+                next: (res) => {
+                    const allScores = res.success ? (res.data ?? []) : [];
+                    // Filtrar solo las notas del alumno específico
+                    const studentScores = allScores.filter((s) => s.idStudent === idStudent);
+                    grid.rows = this.buildSubjectRows(studentScores);
+                    this.recalcAverages(grid);
+                    this.loadingScores.update((s) => ({ ...s, [idStudent]: false }));
+                    this.gradeGrids.update((list) => [...list]);
+                },
+                error: () => {
+                    this.loadingScores.update((s) => ({ ...s, [idStudent]: false }));
+                }
             });
     }
 
-    private buildSubjectRows(scores: GradeScoreExMock[]): SubjectRow[] {
+    private buildSubjectRows(scores: GradeScoreResponse[]): SubjectRow[] {
         const allSubjects = this.subjects();
         const rows: SubjectRow[] = [];
 
@@ -240,11 +307,8 @@ export class AcademicComponent implements OnInit, OnDestroy {
 
     private recalcAverages(grid: StudentGradeGrid): void {
         const periods = this.periods();
-
-        // Último período con número de período mayor
         const lastPeriod = periods.length > 0 ? periods.reduce((a, b) => (b.periodNumber > a.periodNumber ? b : a)) : null;
 
-        // Promedio año por materia + flags de reprobación
         for (const row of grid.rows) {
             const scores: number[] = [];
             for (const period of periods) {
@@ -255,15 +319,11 @@ export class AcademicComponent implements OnInit, OnDestroy {
             }
             row.yearAvg = scores.length > 0 ? this.round2(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
 
-            // Regla 1: nota 1 en el último período
             const lastCell = lastPeriod ? row.cells.get(lastPeriod.idSchoolPeriod) : null;
             row.failedLastPeriod = lastCell?.score === 1;
-
-            // Regla 2: promedio año < 2
             row.failedYearAvg = row.yearAvg !== null && row.yearAvg < 2;
         }
 
-        // Promedio por período
         grid.periodAvgs = new Map();
         for (const period of periods) {
             const periodScores: number[] = [];
@@ -276,12 +336,10 @@ export class AcademicComponent implements OnInit, OnDestroy {
             grid.periodAvgs.set(period.idSchoolPeriod, periodScores.length > 0 ? this.round2(periodScores.reduce((a, b) => a + b, 0) / periodScores.length) : null);
         }
 
-        // Promedio general
         const yearAvgs = grid.rows.map((r) => r.yearAvg).filter((v): v is number => v !== null);
 
         grid.generalAvg = yearAvgs.length > 0 ? this.round2(yearAvgs.reduce((a, b) => a + b, 0) / yearAvgs.length) : null;
 
-        // Calcular estado de reprobación del alumno
         const failedRows = grid.rows.filter((r) => r.failedLastPeriod || r.failedYearAvg);
         grid.failedSubjects = failedRows.map((r) => r.subjectName);
         grid.isReprobado = failedRows.length > 0;
@@ -299,39 +357,40 @@ export class AcademicComponent implements OnInit, OnDestroy {
         cell.editing = false;
     }
 
-    saveScore(grid: StudentGradeGrid, row: SubjectRow, period: SchoolPeriodMock, cell: ScoreCell): void {
+    saveScore(grid: StudentGradeGrid, row: SubjectRow, period: SchoolPeriodResponse, cell: ScoreCell): void {
         if (cell.tempValue === null || cell.tempValue === undefined) {
             cell.editing = false;
             return;
         }
 
-        const score = Math.min(Math.max(cell.tempValue, 0), row.cells.get(period.idSchoolPeriod)?.score ?? 10);
+        const score = Math.min(Math.max(cell.tempValue, 0), 10);
         cell.saving = true;
         cell.editing = false;
 
-        const subject = this.subjects().find((s) => s.idSubject === row.idSubject);
+        // El backend requiere idStudentEnrollment — si aún no lo tenemos en el grid
+        // usamos el idStudent como fallback (el backend lo resuelve via @Query)
+        const request: UpsertGradeScoreRequest = {
+            idStudentEnrollment: grid.idEnrollment ?? grid.student.idStudent,
+            idSubject: row.idSubject,
+            idSchoolPeriod: period.idSchoolPeriod,
+            score,
+            maxScore: 10
+        };
 
         this.academicService
-            .upsertScore({
-                idStudentEnrollment: grid.student.idStudent, // en demo = idStudent
-                idStudent: grid.student.idStudent,
-                studentName: grid.student.fullName,
-                idSection: this.selectedSection!.idSection,
-                idSubject: row.idSubject,
-                subjectName: row.subjectName,
-                subjectCode: row.subjectCode,
-                idSchoolPeriod: period.idSchoolPeriod,
-                schoolPeriodName: period.name,
-                periodNumber: period.periodNumber,
-                score,
-                maxScore: 10
-            })
+            .upsertScore(request)
             .pipe(takeUntil(this.destroy$))
             .subscribe({
-                next: (saved) => {
-                    cell.score = saved.score;
-                    cell.idGradeScore = saved.idGradeScore;
-                    cell.tempValue = saved.score;
+                next: (res) => {
+                    if (res.success && res.data) {
+                        cell.score = res.data.score;
+                        cell.idGradeScore = res.data.idGradeScore;
+                        cell.tempValue = res.data.score;
+                        // Guardar idEnrollment para usos futuros
+                        if (!grid.idEnrollment) {
+                            grid.idEnrollment = res.data.idStudentEnrollment;
+                        }
+                    }
                     cell.saving = false;
                     this.recalcAverages(grid);
                     this.gradeGrids.update((l) => [...l]);
@@ -344,12 +403,15 @@ export class AcademicComponent implements OnInit, OnDestroy {
                 },
                 error: () => {
                     cell.saving = false;
-                    this.messageService.add({ severity: 'error', summary: 'Error al guardar' });
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error al guardar'
+                    });
                 }
             });
     }
 
-    onScoreKeydown(event: KeyboardEvent, grid: StudentGradeGrid, row: SubjectRow, period: SchoolPeriodMock, cell: ScoreCell): void {
+    onScoreKeydown(event: KeyboardEvent, grid: StudentGradeGrid, row: SubjectRow, period: SchoolPeriodResponse, cell: ScoreCell): void {
         if (event.key === 'Enter') this.saveScore(grid, row, period, cell);
         if (event.key === 'Escape') this.cancelEdit(cell);
     }
@@ -363,15 +425,18 @@ export class AcademicComponent implements OnInit, OnDestroy {
         }
         this.loadingSchedules.set(true);
         this.academicService
-            .getSchedules(this.selectedSectionSchedule.idSection)
+            .getSchedulesBySection(this.selectedSectionSchedule.idSection)
             .pipe(takeUntil(this.destroy$))
-            .subscribe((s) => {
-                this.schedules.set(s);
-                this.loadingSchedules.set(false);
+            .subscribe({
+                next: (res) => {
+                    this.schedules.set(res.success ? (res.data ?? []) : []);
+                    this.loadingSchedules.set(false);
+                },
+                error: () => this.loadingSchedules.set(false)
             });
     }
 
-    getScheduleForSlot(day: string, time: string): ScheduleMock | undefined {
+    getScheduleForSlot(day: string, time: string): ClassScheduleResponse | undefined {
         return this.schedules().find((s) => s.dayName === day && s.startTime === time);
     }
 
@@ -394,7 +459,11 @@ export class AcademicComponent implements OnInit, OnDestroy {
     }
 
     getLevelLabel(level: string): string {
-        const map: Record<string, string> = { INICIAL: 'Inicial', EEB: 'EEB', MEDIA: 'Media' };
+        const map: Record<string, string> = {
+            INICIAL: 'Inicial',
+            EEB: 'EEB',
+            MEDIA: 'Media'
+        };
         return map[level] ?? level;
     }
 
@@ -407,26 +476,37 @@ export class AcademicComponent implements OnInit, OnDestroy {
         return map[level] ?? 'secondary';
     }
 
-    get gradeOptions(): { label: string; value: GradeMock }[] {
-        return this.grades().map((g) => ({ label: `${g.name} (${this.getLevelLabel(g.level)})`, value: g }));
+    get gradeOptions(): { label: string; value: GradeResponse }[] {
+        return this.grades().map((g) => ({
+            label: `${g.name} (${this.getLevelLabel(g.level)})`,
+            value: g
+        }));
     }
 
-    get sectionOptions(): { label: string; value: SectionMock }[] {
+    get sectionOptions(): { label: string; value: SectionResponse }[] {
         return this.sections().map((s) => ({
             label: `${s.gradeName} ${s.name} — ${s.homeroomTeacherName ?? 'Sin tutor'}`,
             value: s
         }));
     }
 
-    get allSectionOptions(): { label: string; value: SectionMock }[] {
-        return MOCK_SECTIONS.filter((s) => s.isActive).map((s) => ({ label: `${s.gradeName} ${s.name}`, value: s }));
-    }
-
-    get allSections(): SectionMock[] {
-        return MOCK_SECTIONS.filter((s) => s.isActive);
+    get allSectionOptions(): { label: string; value: SectionResponse }[] {
+        return this.allSections().map((s) => ({
+            label: `${s.gradeName} ${s.name}`,
+            value: s
+        }));
     }
 
     getGradeLevel(idGrade: number): string | null {
         return this.grades().find((g) => g.idGrade === idGrade)?.level ?? null;
+    }
+
+    // fullName helper — StudentResponse tiene person.fullName
+    getStudentName(student: StudentResponse): string {
+        return student.person?.fullName ?? '';
+    }
+
+    getStudentInitial(student: StudentResponse): string {
+        return student.person?.firstName?.charAt(0) ?? '?';
     }
 }

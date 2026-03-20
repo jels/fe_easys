@@ -1,7 +1,11 @@
 // src/app/shared/components/student/student-form-dialog/student-form-dialog.component.ts
-import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, signal } from '@angular/core';
+
+import { Component, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 // PrimeNG
 import { DialogModule } from 'primeng/dialog';
@@ -15,16 +19,21 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { DividerModule } from 'primeng/divider';
 
 // Services
-import { StudentsService } from '../../../../core/services/conf/students.service';
-import { AcademicsService } from '../../../../core/services/conf/academics.service';
+import { StudentsService } from '../../../../core/services/api/students.service';
+import { AcademicsService } from '../../../../core/services/api/academics.service';
+import { AuthService } from '../../../../core/services/api/auth.service';
 
-// Mock types
-import { BranchMock, MOCK_BRANCHES } from '../../../../shared/data/company.mock';
-import { GradeMock, SectionMock } from '../../../data/academic.mock';
+// Models
+import { GradeResponse, SectionResponse } from '../../../../core/models/academic.models';
+import { BranchResponse } from '../../../../core/models/settings.models';
+import { ApiResponse } from '../../../../core/models/auth.models';
+
+// Enums
 import { BLOOD_TYPE_OPTIONS, DOCUMENT_TYPE_OPTIONS, GENDER_OPTIONS } from '../../../../core/models/enums/person.enum';
 import { RELATIONSHIP_OPTIONS, STUDENT_STATUS_OPTIONS } from '../../../../core/models/enums/student.enum';
 
-// Enums / opciones
+import { environment } from '../../../../../environments/environment';
+import { CreateStudentRequest, UpdateStudentRequest } from '../../../../core/models/student.dto';
 
 @Component({
     selector: 'app-student-form-dialog',
@@ -33,8 +42,7 @@ import { RELATIONSHIP_OPTIONS, STUDENT_STATUS_OPTIONS } from '../../../../core/m
     templateUrl: './student-form-dialog.component.html',
     styleUrl: './student-form-dialog.component.scss'
 })
-export class StudentFormDialogComponent implements OnChanges {
-    /** Si es null → modo CREAR; si tiene valor → modo EDITAR */
+export class StudentFormDialogComponent implements OnChanges, OnDestroy {
     @Input() studentId: number | null = null;
     @Input() visible = false;
 
@@ -47,22 +55,26 @@ export class StudentFormDialogComponent implements OnChanges {
     loadingData = signal(false);
     activeStep = signal(0);
 
-    // Datos para dropdowns
-    grades = signal<GradeMock[]>([]);
-    sections = signal<SectionMock[]>([]);
-    branches = signal<BranchMock[]>([]);
+    // Dropdowns
+    grades = signal<GradeResponse[]>([]);
+    sections = signal<SectionResponse[]>([]);
+    branches = signal<BranchResponse[]>([]); // ← cargado desde el backend
 
-    // Opciones enum
+    // Enums
     documentTypeOptions = DOCUMENT_TYPE_OPTIONS;
     genderOptions = GENDER_OPTIONS;
     bloodTypeOptions = BLOOD_TYPE_OPTIONS;
     statusOptions = STUDENT_STATUS_OPTIONS;
     relationshipOptions = RELATIONSHIP_OPTIONS;
 
+    private destroy$ = new Subject<void>();
+
     constructor(
         private fb: FormBuilder,
+        private http: HttpClient, // solo para branches (hasta tener SettingsService)
         private studentsService: StudentsService,
-        private academicsService: AcademicsService
+        private academicsService: AcademicsService,
+        private authService: AuthService
     ) {
         this.buildForm();
     }
@@ -72,6 +84,13 @@ export class StudentFormDialogComponent implements OnChanges {
             this.onDialogOpen();
         }
     }
+
+    ngOnDestroy(): void {
+        this.destroy$.next();
+        this.destroy$.complete();
+    }
+
+    // ── Inicialización ────────────────────────────────────────────────────────
 
     private onDialogOpen(): void {
         this.activeStep.set(0);
@@ -108,7 +127,7 @@ export class StudentFormDialogComponent implements OnChanges {
                 city: [''],
                 address: ['']
             }),
-            enrollmentNumber: ['', Validators.required],
+            enrollmentNumber: [''],
             enrollmentDate: [new Date(), Validators.required],
             status: ['ACTIVE', Validators.required],
             idBranch: [null],
@@ -120,62 +139,104 @@ export class StudentFormDialogComponent implements OnChanges {
             medicalObservations: ['']
         });
 
-        // Cascade grade → section
-        this.form.get('idCurrentGrade')?.valueChanges.subscribe((idGrade) => {
-            this.form.get('idCurrentSection')?.reset(null);
-            if (idGrade) this.loadSections(idGrade);
-            else this.sections.set([]);
-        });
+        // Cascade grado → sección
+        this.form
+            .get('idCurrentGrade')
+            ?.valueChanges.pipe(takeUntil(this.destroy$))
+            .subscribe((idGrade) => {
+                this.form.get('idCurrentSection')?.reset(null);
+                if (idGrade) this.loadSections(idGrade);
+                else this.sections.set([]);
+            });
     }
 
+    // ── Data loading ──────────────────────────────────────────────────────────
+
     private loadDropdowns(): void {
-        this.academicsService.getGrades().subscribe((g) => this.grades.set(g));
-        // Branches desde mock directo (no hay servicio dedicado aún)
-        this.branches.set(MOCK_BRANCHES);
+        const idCompany = this.authService.idCompany;
+        if (!idCompany) return;
+
+        // Grados
+        this.academicsService
+            .getGrades(idCompany)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: (res) => {
+                    if (res.success) this.grades.set(res.data ?? []);
+                }
+            });
+
+        // Sucursales — GET /api/v1/settings/branches?idCompany=
+        const params = new HttpParams().set('idCompany', idCompany);
+        this.http
+            .get<ApiResponse<BranchResponse[]>>(`${environment.apiUrl}settings/branches`, { params })
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: (res) => {
+                    if (res.success) this.branches.set(res.data ?? []);
+                }
+            });
     }
 
     private loadSections(idGrade: number): void {
-        this.academicsService.getSections(idGrade).subscribe((s) => this.sections.set(s));
+        const idCompany = this.authService.idCompany;
+        if (!idCompany) return;
+
+        this.academicsService
+            .getSections(idCompany, { idGrade })
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: (res) => {
+                    if (res.success) this.sections.set(res.data ?? []);
+                }
+            });
     }
 
     private loadStudent(id: number): void {
         this.loadingData.set(true);
-        this.studentsService.getById(id).subscribe({
-            next: (student) => {
-                if (student) {
-                    this.form.patchValue({
-                        enrollmentNumber: student.enrollmentNumber,
-                        enrollmentDate: new Date(student.enrollmentDate),
-                        status: student.status,
-                        idBranch: student.idBranch,
-                        idCurrentGrade: student.idCurrentGrade,
-                        idCurrentSection: student.idCurrentSection,
-                        emergencyContactName: student.emergencyContactName,
-                        emergencyContactPhone: student.emergencyContactPhone,
-                        emergencyContactRelationship: student.emergencyContactRelationship,
-                        medicalObservations: student.medicalObservations,
-                        person: {
-                            firstName: student.person.firstName,
-                            lastName: student.person.lastName,
-                            documentType: student.person.documentType,
-                            documentNumber: student.person.documentNumber,
-                            birthDate: student.person.birthDate ? new Date(student.person.birthDate) : null,
-                            gender: student.person.gender,
-                            bloodType: student.person.bloodType,
-                            phone: student.person.phone,
-                            mobilePhone: student.person.mobilePhone,
-                            email: student.person.email,
-                            city: student.person.city,
-                            address: student.person.address
-                        }
-                    });
-                    if (student.idCurrentGrade) this.loadSections(student.idCurrentGrade);
-                }
-                this.loadingData.set(false);
-            },
-            error: () => this.loadingData.set(false)
-        });
+
+        this.studentsService
+            .getById(id)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: (res) => {
+                    if (res.success && res.data) {
+                        const s = res.data;
+                        this.form.patchValue({
+                            enrollmentNumber: s.enrollmentNumber,
+                            enrollmentDate: new Date(s.enrollmentDate),
+                            status: s.status,
+                            idBranch: s.idBranch,
+                            idCurrentGrade: s.idCurrentGrade,
+                            idCurrentSection: s.idCurrentSection,
+                            emergencyContactName: s.emergencyContactName,
+                            emergencyContactPhone: s.emergencyContactPhone,
+                            emergencyContactRelationship: s.emergencyContactRelationship,
+                            medicalObservations: s.medicalObservations,
+                            person: {
+                                firstName: s.person.firstName,
+                                lastName: s.person.lastName,
+                                documentType: s.person.documentType,
+                                documentNumber: s.person.documentNumber,
+                                birthDate: s.person.birthDate ? new Date(s.person.birthDate) : null,
+                                gender: s.person.gender,
+                                bloodType: s.person.bloodType,
+                                phone: s.person.phone,
+                                mobilePhone: s.person.mobilePhone,
+                                email: s.person.email,
+                                city: s.person.city,
+                                address: s.person.address
+                            }
+                        });
+                        if (s.idCurrentGrade) this.loadSections(s.idCurrentGrade);
+                    }
+                    this.loadingData.set(false);
+                },
+                error: () => this.loadingData.set(false)
+            });
     }
+
+    // ── Submit ────────────────────────────────────────────────────────────────
 
     onSubmit(): void {
         if (this.form.invalid) {
@@ -183,12 +244,92 @@ export class StudentFormDialogComponent implements OnChanges {
             return;
         }
         this.loading.set(true);
-        // Simular guardado (DEMO)
-        setTimeout(() => {
-            this.loading.set(false);
-            this.onSave.emit();
-        }, 600);
+        this.isEditMode() ? this.update() : this.create();
     }
+
+    private create(): void {
+        const idCompany = this.authService.idCompany;
+        if (!idCompany) return;
+
+        const v = this.form.value;
+        const request: CreateStudentRequest = {
+            idCompany,
+            idBranch: v.idBranch || undefined,
+            idCurrentGrade: v.idCurrentGrade || undefined,
+            idCurrentSection: v.idCurrentSection || undefined,
+            enrollmentNumber: v.enrollmentNumber || undefined,
+            enrollmentDate: this.toIsoDate(v.enrollmentDate),
+            emergencyContactName: v.emergencyContactName || undefined,
+            emergencyContactPhone: v.emergencyContactPhone || undefined,
+            emergencyContactRelationship: v.emergencyContactRelationship || undefined,
+            medicalObservations: v.medicalObservations || undefined,
+            personData: {
+                idCompany,
+                firstName: v.person.firstName,
+                lastName: v.person.lastName,
+                documentType: v.person.documentType,
+                documentNumber: v.person.documentNumber,
+                birthDate: v.person.birthDate ? this.toIsoDate(v.person.birthDate) : undefined,
+                gender: v.person.gender || undefined,
+                bloodType: v.person.bloodType || undefined,
+                phone: v.person.phone || undefined,
+                mobilePhone: v.person.mobilePhone || undefined,
+                email: v.person.email || undefined,
+                city: v.person.city || undefined,
+                address: v.person.address || undefined
+            }
+        };
+
+        this.studentsService
+            .create(request)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: (res) => {
+                    this.loading.set(false);
+                    if (res.success) this.onSave.emit();
+                },
+                error: () => this.loading.set(false)
+            });
+    }
+
+    private update(): void {
+        const v = this.form.value;
+        const request: UpdateStudentRequest = {
+            firstName: v.person.firstName,
+            lastName: v.person.lastName,
+            documentType: v.person.documentType,
+            documentNumber: v.person.documentNumber,
+            birthDate: v.person.birthDate ? this.toIsoDate(v.person.birthDate) : undefined,
+            gender: v.person.gender || undefined,
+            bloodType: v.person.bloodType || undefined,
+            phone: v.person.phone || undefined,
+            mobilePhone: v.person.mobilePhone || undefined,
+            email: v.person.email || undefined,
+            city: v.person.city || undefined,
+            address: v.person.address || undefined,
+            idBranch: v.idBranch || undefined,
+            idCurrentGrade: v.idCurrentGrade || undefined,
+            idCurrentSection: v.idCurrentSection || undefined,
+            status: v.status,
+            emergencyContactName: v.emergencyContactName || undefined,
+            emergencyContactPhone: v.emergencyContactPhone || undefined,
+            emergencyContactRelationship: v.emergencyContactRelationship || undefined,
+            medicalObservations: v.medicalObservations || undefined
+        };
+
+        this.studentsService
+            .update(this.studentId!, request)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: (res) => {
+                    this.loading.set(false);
+                    if (res.success) this.onSave.emit();
+                },
+                error: () => this.loading.set(false)
+            });
+    }
+
+    // ── UI helpers ────────────────────────────────────────────────────────────
 
     close(): void {
         this.form.reset();
@@ -206,5 +347,11 @@ export class StudentFormDialogComponent implements OnChanges {
 
     get dialogSubtitle(): string {
         return this.isEditMode() ? 'Actualice los datos del estudiante' : 'Complete los datos para registrar un nuevo estudiante';
+    }
+
+    private toIsoDate(date: Date | string): string {
+        if (!date) return '';
+        const d = date instanceof Date ? date : new Date(date);
+        return d.toISOString().split('T')[0];
     }
 }

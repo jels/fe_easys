@@ -1,112 +1,80 @@
 // src/app/core/models/auth.models.ts
 
-/**
- *  Request para login
- */
+// ── Requests ──────────────────────────────────────────────────────────────────
+
 export interface LoginRequest {
     username: string;
     password: string;
 }
 
-/**
- *  Estructura completa de respuesta del login
- */
-export interface LoginResponse
-    extends ApiResponse<{
-        accessToken: string;
-        refreshToken: string;
-        tokenType: string;
-        expiresIn: number;
-        user: BackendUser;
-    }> {}
-
-/**
- *  Estructura del usuario en el frontend
- */
-export interface UserInfo {
-    id: number;
-    email: string;
-    firstName: string;
-    lastName: string;
-    roles: string[]; // ⚠️ Plural, como array
-}
-
-/**
- *  Request para refresh token
- */
 export interface RefreshTokenRequest {
     refreshToken: string;
 }
 
-/**
- *  Response del refresh token
- */
-export interface RefreshTokenResponse
-    extends ApiResponse<{
-        accessToken: string;
-        tokenType: string;
-        expiresIn: number;
-    }> {}
-
-/**
- *  Request para registro
- */
-export interface RegisterRequest {
-    email: string;
-    password: string;
-    firstName: string;
-    lastName: string;
-    username?: string;
+export interface ChangePasswordRequest {
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
 }
 
-/**
- * Response genérico de la API
- */
+// ── Respuesta genérica del backend ────────────────────────────────────────────
+
 export interface ApiResponse<T = any> {
     success: boolean;
     message: string;
     data?: T;
     timestamp: string;
-    path: string;
 }
 
-/**
- *  Estructura del payload del JWT decodificado
- */
-export interface JwtPayload {
-    sub?: string; // Subject (normalmente el email o ID)
-    userId?: number; // ID del usuario
-    id?: number; // ID alternativo
-    email?: string; // Email del usuario
-    firstName?: string; // Nombre
-    lastName?: string; // Apellido
-    given_name?: string; // Nombre alternativo
-    family_name?: string; // Apellido alternativo
-    roles?: string[]; // Roles como array
-    authorities?: string[]; // Authorities (similar a roles)
-    role?: string; // Role como string
-    exp?: number; // Expiration timestamp
-    iat?: number; // Issued at timestamp
-    [key: string]: any; // Otros campos posibles
+// ── Estructuras de usuario del backend ───────────────────────────────────────
+// Alineadas con AuthResponse.java / UserInfoResponse / RoleInfo
+
+export interface RoleInfo {
+    idRole: number;
+    name: string; // Java: name (no roleName)
+    idCompany: number;
+    companyName: string;
+    idBranch: number | null;
+    branchName: string | null;
 }
 
-/**
- *  Estructura del usuario que devuelve el backend
- */
-export interface BackendUser {
-    id: number;
+export interface UserInfoResponse {
+    id: number; // Java: id (no idUser)
+    username: string;
     email: string;
     firstName: string;
     lastName: string;
-    username: string;
-    roles: Roles[]; // ⚠️ Plural, como array
+    isSuperAdmin: boolean | null;
+    roles: RoleInfo[];
 }
 
-/**
- *  Estructura del usuario que devuelve el backend
- */
-export interface Roles {
-    idRole: number;
-    code: string;
-    name: string; // ⚠️ Singular, como string
+export interface AuthResponse {
+    accessToken: string;
+    refreshToken: string;
+    tokenType: string;
+    expiresIn: number;
+    user: UserInfoResponse;
+}
+
+// ── Payload JWT decodificado ──────────────────────────────────────────────────
+
+export interface JwtPayload {
+    sub?: string;
+    userId?: number;
+    id?: number;
+    email?: string;
+    username?: string;
+    roles?: string[];
+    authorities?: string[];
+    exp?: number;
+    iat?: number;
+    [key: string]: any;
+}
+
+// ── Modelo de sesión guardado en localStorage ─────────────────────────────────
+
+export interface SessionData {
+    accessToken: string;
+    refreshToken: string;
+    user: UserInfoResponse;
 }

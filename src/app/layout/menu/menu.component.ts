@@ -14,7 +14,8 @@ export class MenuComponent {
     model: MenuItem[] = [];
     private authService = inject(AuthService);
 
-    rolUser = this.authService.getUserRoles();
+    // rolUser = this.authService.getUserRoles();
+    rolUser = '';
 
     constructor() {}
 
@@ -229,6 +230,11 @@ export class MenuComponent {
                                 label: 'Gestionar Pagos',
                                 icon: 'pi pi-fw pi-plus',
                                 routerLink: '/sys/payments'
+                            },
+                            {
+                                label: 'Libro Caja',
+                                icon: 'pi pi-fw pi-plus',
+                                routerLink: '/sys/cash'
                             }
                             // {
                             //     label: 'Lista de Pagos',

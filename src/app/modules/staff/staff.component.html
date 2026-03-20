@@ -107,10 +107,10 @@
 
             <ng-template pTemplate="body" let-member>
                 <tr>
-                    <!-- Avatar -->
+                    <!-- Avatar — getInitials recibe StaffResponse completo -->
                     <td>
                         <div class="staff-avatar" (click)="openDetail(member)" [attr.data-type]="member.staffType">
-                            <span class="initials">{{ getInitials(member.fullName) }}</span>
+                            <span class="initials">{{ getInitials(member) }}</span>
                         </div>
                     </td>
 
@@ -119,10 +119,10 @@
                         <span class="employee-code">{{ member.employeeNumber }}</span>
                     </td>
 
-                    <!-- Nombre -->
+                    <!-- Nombre — fullName en person.fullName -->
                     <td>
                         <div class="staff-name-cell" (click)="openDetail(member)">
-                            <div class="staff-name">{{ member.fullName }}</div>
+                            <div class="staff-name">{{ member.person.fullName }}</div>
                             <div class="staff-sub">
                                 {{ member.person.documentType }}: {{ member.person.documentNumber }}
                             </div>

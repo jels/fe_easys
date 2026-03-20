@@ -1,4 +1,5 @@
 // src/app/shared/components/access/access-log-dialog/access-log-dialog.component.ts
+
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -12,9 +13,9 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { TextareaModule } from 'primeng/textarea';
 import { DividerModule } from 'primeng/divider';
 
-import { AccessControlService, AccessLogRequest } from '../../../../core/services/conf/access-control.service';
-import { StudentMock } from '../../../data/people.mock';
-import { StaffMock } from '../../../data/staff.mock';
+import { AccessControlService, AccessLogRequest, StaffAccessRequest } from '../../../../core/services/api/access-control.service';
+import { StaffResponse } from '../../../../core/models/staff.models';
+import { StudentResponse } from '../../../../core/models/student.dto';
 
 @Component({
     selector: 'app-access-log-dialog',
@@ -25,8 +26,8 @@ import { StaffMock } from '../../../data/staff.mock';
 })
 export class AccessLogDialogComponent implements OnChanges {
     @Input() type: 'STUDENT' | 'STAFF' = 'STUDENT';
-    @Input() students: StudentMock[] = [];
-    @Input() staff: StaffMock[] = [];
+    @Input() students: StudentResponse[] = [];
+    @Input() staff: StaffResponse[] = [];
     @Input() defaultDate = '';
     @Input() visible = false;
 
@@ -74,17 +75,17 @@ export class AccessLogDialogComponent implements OnChanges {
         this.loading.set(true);
 
         const v = this.form.value;
-        const req: AccessLogRequest = {
-            accessDate: v.accessDate,
-            entryTime: v.entryTime ? `${v.accessDate}T${this.toTimeStr(v.entryTime)}` : undefined,
-            exitTime: v.exitTime ? `${v.accessDate}T${this.toTimeStr(v.exitTime)}` : undefined,
-            isAbsent: v.isAbsent,
-            absenceJustified: v.absenceJustified,
-            observations: v.observations || undefined
-        };
 
         if (this.type === 'STUDENT') {
-            req.idStudent = v.subjectId;
+            const req: AccessLogRequest = {
+                idStudent: v.subjectId,
+                accessDate: v.accessDate,
+                entryTime: v.entryTime ? `${v.accessDate}T${this.toTimeStr(v.entryTime)}` : undefined,
+                exitTime: v.exitTime ? `${v.accessDate}T${this.toTimeStr(v.exitTime)}` : undefined,
+                isAbsent: v.isAbsent,
+                absenceJustified: v.absenceJustified,
+                observations: v.observations || undefined
+            };
             this.accessService.registerStudentAccess(req).subscribe({
                 next: () => {
                     this.loading.set(false);
@@ -93,7 +94,13 @@ export class AccessLogDialogComponent implements OnChanges {
                 error: () => this.loading.set(false)
             });
         } else {
-            req.idStaff = v.subjectId;
+            const req: StaffAccessRequest = {
+                idStaff: v.subjectId,
+                accessDate: v.accessDate,
+                entryTime: v.entryTime ? `${v.accessDate}T${this.toTimeStr(v.entryTime)}` : undefined,
+                exitTime: v.exitTime ? `${v.accessDate}T${this.toTimeStr(v.exitTime)}` : undefined,
+                observations: v.observations || undefined
+            };
             this.accessService.registerStaffAccess(req).subscribe({
                 next: () => {
                     this.loading.set(false);
@@ -125,11 +132,18 @@ export class AccessLogDialogComponent implements OnChanges {
         return this.type === 'STUDENT';
     }
 
+    // StudentResponse: fullName está en person.fullName
     get subjectOptions(): { label: string; value: number }[] {
         if (this.isStudentMode) {
-            return this.students.map((s) => ({ label: `${s.fullName} (${s.enrollmentNumber})`, value: s.idStudent }));
+            return this.students.map((s) => ({
+                label: `${s.person.fullName} (${s.enrollmentNumber})`,
+                value: s.idStudent
+            }));
         }
-        return this.staff.map((s) => ({ label: `${s.fullName} (${s.employeeNumber})`, value: s.idStaff }));
+        return this.staff.map((s) => ({
+            label: `${s.person.fullName} (${s.employeeNumber})`,
+            value: s.idStaff
+        }));
     }
 
     get dialogTitle(): string {

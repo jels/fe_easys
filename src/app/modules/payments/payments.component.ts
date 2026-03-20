@@ -1,4 +1,5 @@
 // src/app/modules/payments/payments.component.ts
+
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -16,22 +17,18 @@ import { TooltipModule } from 'primeng/tooltip';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
-import { PaymentsService, PaymentFilter, InstallmentFilter } from '../../core/services/conf/payments.service';
-import { PaymentMock, PaymentInstallmentMock, PaymentConceptMock, MOCK_PAYMENT_PLANS } from '../../shared/data/payments.mock';
-import { MOCK_STUDENTS } from '../../shared/data/people.mock';
+// Services
+import { PaymentsService } from '../../core/services/api/payments.service';
+import { StudentsService } from '../../core/services/api/students.service';
+import { AuthService } from '../../core/services/api/auth.service';
 
+// Models
+
+// Dialogs
 import { PaymentFormDialogComponent } from '../../shared/components/payments/payment-form-dialog/payment-form-dialog.component';
 import { PaymentDetailDialogComponent } from '../../shared/components/payments/payment-detail-dialog/payment-detail-dialog.component';
-
-interface FinancialStats {
-    totalCollectedMonth: number;
-    totalCollectedYear: number;
-    pendingAmount: number;
-    overdueAmount: number;
-    paymentsThisMonth: number;
-    overdueCount: number;
-    pendingCount: number;
-}
+import { PaymentConceptResponse, PaymentInstallmentResponse, PaymentResponse, PaymentStatsResponse } from '../../core/models/operations.models';
+import { StudentResponse } from '../../core/models/student.dto';
 
 @Component({
     selector: 'app-payments',
@@ -43,57 +40,79 @@ interface FinancialStats {
 })
 export class PaymentsComponent implements OnInit, OnDestroy {
     activeTab = signal('0');
-    stats = signal<FinancialStats | null>(null);
+    stats = signal<PaymentStatsResponse | null>(null);
 
     // Tab 1 – Recibos
-    payments = signal<PaymentMock[]>([]);
+    payments = signal<PaymentResponse[]>([]);
     loadingPay = signal(false);
+    totalPayments = signal(0);
     searchPay = '';
     filterActive: boolean | null = null;
 
     // Tab 2 – Cuotas
-    installments = signal<PaymentInstallmentMock[]>([]);
+    installments = signal<PaymentInstallmentResponse[]>([]);
     loadingInst = signal(false);
     instFilter: 'PENDING' | 'OVERDUE' | 'ALL' = 'ALL';
 
     // Tab 3 – Vencidas
-    overdue = signal<PaymentInstallmentMock[]>([]);
+    overdue = signal<PaymentInstallmentResponse[]>([]);
     loadingOver = signal(false);
 
     // Tab 4 – Conceptos
-    concepts = signal<PaymentConceptMock[]>([]);
+    concepts = signal<PaymentConceptResponse[]>([]);
     loadingConcepts = signal(false);
+
+    // Alumnos para los dialogs
+    students = signal<StudentResponse[]>([]);
 
     // Modales
     showFormDialog = signal(false);
     showDetailDialog = signal(false);
     selectedPaymentId = signal<number | null>(null);
-    preselectedInstallment = signal<PaymentInstallmentMock | null>(null);
+    preselectedInstallment = signal<PaymentInstallmentResponse | null>(null);
 
-    activeOptions = [
+    readonly activeOptions = [
         { label: 'Todos', value: null },
         { label: 'Activos', value: true },
         { label: 'Anulados', value: false }
     ];
 
-    readonly students = MOCK_STUDENTS.filter((s) => s.isActive);
-
     private destroy$ = new Subject<void>();
 
     constructor(
         private paymentsService: PaymentsService,
+        private studentsService: StudentsService,
+        private authService: AuthService,
         private messageService: MessageService
     ) {}
 
     ngOnInit(): void {
+        this.loadStudents();
         this.loadAll();
     }
+
     ngOnDestroy(): void {
         this.destroy$.next();
         this.destroy$.complete();
     }
 
     // ── Carga ─────────────────────────────────────────────────────────────────
+
+    private get idCompany(): number | null {
+        return this.authService.idCompany;
+    }
+
+    private loadStudents(): void {
+        if (!this.idCompany) return;
+        this.studentsService
+            .getAll(this.idCompany, { size: 500 })
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: (res) => {
+                    if (res.success) this.students.set(res.data?.content ?? []);
+                }
+            });
+    }
 
     loadAll(): void {
         this.loadStats();
@@ -104,59 +123,89 @@ export class PaymentsComponent implements OnInit, OnDestroy {
     }
 
     loadStats(): void {
+        if (!this.idCompany) return;
         this.paymentsService
-            .getFinancialStats()
+            .getStats(this.idCompany)
             .pipe(takeUntil(this.destroy$))
-            .subscribe((s) => this.stats.set(s));
+            .subscribe({
+                next: (res) => {
+                    if (res.success) this.stats.set(res.data ?? null);
+                }
+            });
     }
 
     loadPayments(): void {
+        if (!this.idCompany) return;
         this.loadingPay.set(true);
-        const f: PaymentFilter = {};
-        if (this.searchPay) f.search = this.searchPay;
-        if (this.filterActive !== null) f.isActive = this.filterActive;
 
         this.paymentsService
-            .getAllPayments(f)
+            .getPayments(this.idCompany, {
+                search: this.searchPay || undefined,
+                size: 50
+            })
             .pipe(takeUntil(this.destroy$))
-            .subscribe((data) => {
-                this.payments.set(data);
-                this.loadingPay.set(false);
+            .subscribe({
+                next: (res) => {
+                    let data = res.success ? (res.data?.content ?? []) : [];
+                    // filtro isActive client-side (el backend puede no soportarlo)
+                    if (this.filterActive !== null) {
+                        data = data.filter((p) => p.isActive === this.filterActive);
+                    }
+                    this.payments.set(data);
+                    this.totalPayments.set(res.data?.totalElements ?? data.length);
+                    this.loadingPay.set(false);
+                },
+                error: () => this.loadingPay.set(false)
             });
     }
 
     loadInstallments(): void {
+        if (!this.idCompany) return;
         this.loadingInst.set(true);
-        const f: InstallmentFilter = this.instFilter === 'OVERDUE' ? { overdue: true } : this.instFilter === 'PENDING' ? { status: 'PENDING' } : {};
 
-        this.paymentsService
-            .getInstallments(f)
-            .pipe(takeUntil(this.destroy$))
-            .subscribe((data) => {
-                this.installments.set(data);
+        const req$ =
+            this.instFilter === 'OVERDUE'
+                ? this.paymentsService.getOverdueInstallments(this.idCompany)
+                : this.instFilter === 'PENDING'
+                  ? this.paymentsService.getPendingInstallments(this.idCompany)
+                  : this.paymentsService.getPendingInstallments(this.idCompany); // ALL: pendientes como default
+
+        req$.pipe(takeUntil(this.destroy$)).subscribe({
+            next: (res) => {
+                this.installments.set(res.success ? (res.data ?? []) : []);
                 this.loadingInst.set(false);
-            });
+            },
+            error: () => this.loadingInst.set(false)
+        });
     }
 
     loadOverdue(): void {
+        if (!this.idCompany) return;
         this.loadingOver.set(true);
         this.paymentsService
-            .getOverdueInstallments()
+            .getOverdueInstallments(this.idCompany)
             .pipe(takeUntil(this.destroy$))
-            .subscribe((data) => {
-                this.overdue.set(data);
-                this.loadingOver.set(false);
+            .subscribe({
+                next: (res) => {
+                    this.overdue.set(res.success ? (res.data ?? []) : []);
+                    this.loadingOver.set(false);
+                },
+                error: () => this.loadingOver.set(false)
             });
     }
 
     loadConcepts(): void {
+        if (!this.idCompany) return;
         this.loadingConcepts.set(true);
         this.paymentsService
-            .getConcepts()
+            .getConcepts(this.idCompany)
             .pipe(takeUntil(this.destroy$))
-            .subscribe((data) => {
-                this.concepts.set(data);
-                this.loadingConcepts.set(false);
+            .subscribe({
+                next: (res) => {
+                    this.concepts.set(res.success ? (res.data ?? []) : []);
+                    this.loadingConcepts.set(false);
+                },
+                error: () => this.loadingConcepts.set(false)
             });
     }
 
@@ -180,13 +229,13 @@ export class PaymentsComponent implements OnInit, OnDestroy {
 
     // ── Modales ───────────────────────────────────────────────────────────────
 
-    openNewPayment(installment?: PaymentInstallmentMock): void {
+    openNewPayment(installment?: PaymentInstallmentResponse): void {
         this.preselectedInstallment.set(installment ?? null);
         this.selectedPaymentId.set(null);
         this.showFormDialog.set(true);
     }
 
-    openDetail(payment: PaymentMock): void {
+    openDetail(payment: PaymentResponse): void {
         this.selectedPaymentId.set(payment.idPayment);
         this.showDetailDialog.set(true);
     }
@@ -235,45 +284,48 @@ export class PaymentsComponent implements OnInit, OnDestroy {
     }
 
     getInstStatusLabel(s: string): string {
-        const map: Record<string, string> = {
-            PAID: 'Pagado',
-            PENDING: 'Pendiente',
-            OVERDUE: 'Vencido',
-            PARTIAL: 'Parcial'
-        };
-        return map[s] ?? s;
+        return ({ PAID: 'Pagado', PENDING: 'Pendiente', OVERDUE: 'Vencido', PARTIAL: 'Parcial' } as Record<string, string>)[s] ?? s;
     }
 
     getInstStatusSeverity(s: string): 'success' | 'danger' | 'warn' | 'secondary' | 'info' | 'contrast' {
-        const map: Record<string, 'success' | 'danger' | 'warn' | 'secondary' | 'info' | 'contrast'> = {
-            PAID: 'success',
-            PENDING: 'info',
-            OVERDUE: 'danger',
-            PARTIAL: 'warn'
-        };
-        return map[s] ?? 'secondary';
+        return (
+            (
+                {
+                    PAID: 'success',
+                    PENDING: 'info',
+                    OVERDUE: 'danger',
+                    PARTIAL: 'warn'
+                } as Record<string, 'success' | 'danger' | 'warn' | 'secondary' | 'info' | 'contrast'>
+            )[s] ?? 'secondary'
+        );
     }
 
     getConceptTypeLabel(cat: string): string {
-        const map: Record<string, string> = {
-            TUITION: 'Mensualidad',
-            ENROLLMENT: 'Matrícula',
-            MATERIAL: 'Material',
-            UNIFORM: 'Uniforme',
-            OTHER: 'Otro'
-        };
-        return map[cat] ?? cat;
+        return (
+            (
+                {
+                    TUITION: 'Mensualidad',
+                    ENROLLMENT: 'Matrícula',
+                    MATERIAL: 'Material',
+                    UNIFORM: 'Uniforme',
+                    OTHER: 'Otro'
+                } as Record<string, string>
+            )[cat] ?? cat
+        );
     }
 
     getConceptTypeSeverity(cat: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
-        const map: Record<string, 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast'> = {
-            TUITION: 'info',
-            ENROLLMENT: 'success',
-            MATERIAL: 'warn',
-            UNIFORM: 'contrast',
-            OTHER: 'secondary'
-        };
-        return map[cat] ?? 'secondary';
+        return (
+            (
+                {
+                    TUITION: 'info',
+                    ENROLLMENT: 'success',
+                    MATERIAL: 'warn',
+                    UNIFORM: 'contrast',
+                    OTHER: 'secondary'
+                } as Record<string, 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast'>
+            )[cat] ?? 'secondary'
+        );
     }
 
     isOverdue(dueDate: string): boolean {
@@ -285,12 +337,12 @@ export class PaymentsComponent implements OnInit, OnDestroy {
         return Math.floor(diff / (1000 * 60 * 60 * 24));
     }
 
-    // Obtener nombre del alumno de una cuota via payment plan
-    getStudentForInstallment(inst: PaymentInstallmentMock): string {
+    // PaymentInstallmentResponse ya trae studentName y conceptName directamente
+    getStudentForInstallment(inst: PaymentInstallmentResponse): string {
         return inst.studentName ?? '–';
     }
 
-    getConceptForInstallment(inst: PaymentInstallmentMock): string {
+    getConceptForInstallment(inst: PaymentInstallmentResponse): string {
         return inst.conceptName ?? '–';
     }
 

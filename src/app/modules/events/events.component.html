@@ -12,34 +12,34 @@
         </div>
     </div>
 
-    <!-- Stats -->
+    <!-- Stats — null-safe con stats()! dentro del @if -->
     @if (stats()) {
     <div class="stats-grid">
         <div class="stat-card stat-total">
             <div class="stat-icon"><i class="pi pi-calendar"></i></div>
             <div class="stat-info">
-                <span class="stat-value">{{ stats().totalEvents }}</span>
+                <span class="stat-value">{{ stats()!.totalEvents }}</span>
                 <span class="stat-label">Total eventos</span>
             </div>
         </div>
         <div class="stat-card stat-planned">
             <div class="stat-icon"><i class="pi pi-clock"></i></div>
             <div class="stat-info">
-                <span class="stat-value">{{ stats().planned }}</span>
+                <span class="stat-value">{{ stats()!.planned }}</span>
                 <span class="stat-label">Planificados</span>
             </div>
         </div>
         <div class="stat-card stat-active">
             <div class="stat-icon"><i class="pi pi-play"></i></div>
             <div class="stat-info">
-                <span class="stat-value">{{ stats().active }}</span>
+                <span class="stat-value">{{ stats()!.active }}</span>
                 <span class="stat-label">En curso</span>
             </div>
         </div>
         <div class="stat-card stat-regs">
             <div class="stat-icon"><i class="pi pi-users"></i></div>
             <div class="stat-info">
-                <span class="stat-value">{{ stats().totalRegistrations }}</span>
+                <span class="stat-value">{{ stats()!.totalRegistrations }}</span>
                 <span class="stat-label">Inscripciones</span>
             </div>
         </div>
@@ -62,7 +62,6 @@
                 <!-- TAB 0 — LISTA DE EVENTOS                                  -->
                 <!-- ══════════════════════════════════════════════════════════ -->
                 <p-tabpanel value="0">
-                    <!-- Filtros -->
                     <div class="filter-bar">
                         <div class="filter-search">
                             <i class="pi pi-search"></i>
@@ -83,7 +82,6 @@
                         }
                     </div>
 
-                    <!-- Tabla -->
                     @if (loadingEvents()) {
                     <div class="flex flex-col gap-2">
                         @for (i of [1,2,3,4]; track i) { <p-skeleton height="3.5rem" /> }
@@ -199,11 +197,9 @@
                     <p-skeleton height="400px" />
                     } @else {
                     <div class="calendar-grid">
-                        <!-- Cabecera días -->
                         @for (d of DAYS_SHORT; track d) {
                         <div class="cal-day-header">{{ d }}</div>
                         }
-                        <!-- Celdas -->
                         @for (day of getCalendarDays(); track $index) {
                         <div class="cal-cell" [class.cal-empty]="day === null"
                             [class.cal-today]="day !== null && isToday(day)">
@@ -225,7 +221,6 @@
                     </div>
                     }
 
-                    <!-- Leyenda tipos -->
                     <div class="calendar-legend">
                         @for (type of eventTypes(); track type.idEventType) {
                         <span class="legend-item">
@@ -241,7 +236,6 @@
                 <!-- ══════════════════════════════════════════════════════════ -->
                 <p-tabpanel value="2">
                     <div class="reg-layout">
-                        <!-- Panel izquierdo: selector de evento -->
                         <div class="reg-event-panel">
                             <div class="reg-panel-title">Seleccionar evento</div>
                             @for (ev of events(); track ev.idEvent) {
@@ -257,7 +251,6 @@
                             }
                         </div>
 
-                        <!-- Panel derecho: inscriptos -->
                         <div class="reg-list-panel">
                             @if (!selectedEventForReg()) {
                             <div class="empty-tab">
@@ -275,8 +268,8 @@
                                         }
                                     </span>
                                 </div>
-                                @if (selectedEventForReg()!.status !== 'CANCELLED' && selectedEventForReg()!.status !==
-                                'COMPLETED') {
+                                @if (selectedEventForReg()!.status !== 'CANCELLED'
+                                && selectedEventForReg()!.status !== 'COMPLETED') {
                                 <button pButton label="Inscribir alumno" icon="pi pi-user-plus" severity="success"
                                     (click)="openRegDialog()"></button>
                                 }
@@ -300,7 +293,7 @@
                                 <ng-template pTemplate="body" let-reg>
                                     <tr>
                                         <td class="font-semibold">{{ reg.studentName }}</td>
-                                        <td>{{ reg.gradeName }} {{ reg.sectionName }}</td>
+                                        <td>{{ reg.gradeName ?? '' }} {{ reg.sectionName ?? '' }}</td>
                                         <td>{{ reg.registrationDate }}</td>
                                         <td class="text-center">
                                             <p-tag [value]="getRegStatusLabel(reg.status)"
@@ -363,13 +356,13 @@
 <!-- ══════════════════════════════════════════════════════════════════════════ -->
 <!-- MODAL: DETALLE DEL EVENTO                                                 -->
 <!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- showDetail es boolean (no signal) — [(visible)] funciona directamente -->
 <p-dialog header="Detalle del Evento" [(visible)]="showDetail" [modal]="true" [draggable]="false"
     styleClass="event-detail-dialog" [style]="{ width: '680px' }" (onHide)="closeDetail()">
     @if (loadingDetail()) {
     <p-skeleton height="300px" />
     } @else if (selectedEvent(); as ev) {
     <div class="detail-content">
-        <!-- Header del evento -->
         <div class="detail-event-header" [style.border-left-color]="getTypeColor(ev.idEventType)">
             <div class="detail-type-badge" [style.background]="getTypeColor(ev.idEventType) + '1a'"
                 [style.color]="getTypeColor(ev.idEventType)">
@@ -382,7 +375,6 @@
             }
         </div>
 
-        <!-- Info grid -->
         <div class="detail-info-grid">
             <div class="detail-info-item">
                 <i class="pi pi-calendar"></i>
@@ -462,7 +454,6 @@
             }
         </div>
 
-        <!-- Estado y transición -->
         <div class="detail-status-bar">
             <p-tag [value]="getStatusLabel(ev.status)" [severity]="getStatusSeverity(ev.status)" styleClass="text-sm" />
             <div class="detail-status-actions">
@@ -508,6 +499,16 @@
                 <p-select formControlName="idEventType" [options]="typeFormOptions" optionLabel="label"
                     optionValue="value" placeholder="Seleccionar tipo" styleClass="w-full" />
                 @if (isFieldInvalid('idEventType')) { <small class="error">Seleccione un tipo</small> }
+            </div>
+        </div>
+
+        <!-- Año lectivo — ahora cargado del backend -->
+        <div class="form-row">
+            <div class="form-field">
+                <label>Año lectivo <span class="req">*</span></label>
+                <p-select formControlName="idSchoolYear" [options]="schoolYearOptions" optionLabel="label"
+                    optionValue="value" placeholder="Seleccionar año" styleClass="w-full" />
+                @if (isFieldInvalid('idSchoolYear')) { <small class="error">Seleccione un año lectivo</small> }
             </div>
         </div>
 

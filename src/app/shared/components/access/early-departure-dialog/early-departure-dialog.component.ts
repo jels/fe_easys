@@ -1,4 +1,5 @@
 // src/app/shared/components/access/early-departure-dialog/early-departure-dialog.component.ts
+
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -10,9 +11,9 @@ import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { TextareaModule } from 'primeng/textarea';
 
-import { AccessControlService, EarlyDepartureRequest } from '../../../../core/services/conf/access-control.service';
-import { StudentMock } from '../../../../shared/data/people.mock';
-import { StaffMock } from '../../../data/staff.mock';
+import { AccessControlService, EarlyDepartureRequest } from '../../../../core/services/api/access-control.service';
+import { StaffResponse } from '../../../../core/models/staff.models';
+import { StudentResponse } from '../../../../core/models/student.dto';
 
 @Component({
     selector: 'app-early-departure-dialog',
@@ -22,8 +23,8 @@ import { StaffMock } from '../../../data/staff.mock';
     styleUrl: './early-departure-dialog.component.scss'
 })
 export class EarlyDepartureDialogComponent implements OnChanges {
-    @Input() students: StudentMock[] = [];
-    @Input() staff: StaffMock[] = [];
+    @Input() students: StudentResponse[] = [];
+    @Input() staff: StaffResponse[] = [];
     @Input() defaultDate = '';
     @Input() visible = false;
 
@@ -33,7 +34,7 @@ export class EarlyDepartureDialogComponent implements OnChanges {
     form!: FormGroup;
     loading = signal(false);
 
-    relationshipOptions = [
+    readonly relationshipOptions = [
         { label: 'Padre', value: 'FATHER' },
         { label: 'Madre', value: 'MOTHER' },
         { label: 'Tutor Legal', value: 'LEGAL_GUARDIAN' },
@@ -81,10 +82,10 @@ export class EarlyDepartureDialogComponent implements OnChanges {
         const req: EarlyDepartureRequest = {
             idStudent: v.idStudent,
             departureDatetime: dt.toISOString(),
+            reason: v.reason || undefined,
             pickedUpByName: v.pickedUpByName,
             pickedUpByRelationship: v.pickedUpByRelationship,
-            reason: v.reason || undefined,
-            authorizedByStaffId: v.authorizedByStaffId || undefined
+            idAuthorizedByStaff: v.authorizedByStaffId || undefined
         };
 
         this.accessService.registerEarlyDeparture(req).subscribe({
@@ -106,11 +107,19 @@ export class EarlyDepartureDialogComponent implements OnChanges {
         return !!(c?.invalid && c?.touched);
     }
 
+    // StudentResponse: fullName en person.fullName, gradeName/sectionName directos
     get studentOptions(): { label: string; value: number }[] {
-        return this.students.map((s) => ({ label: `${s.fullName} — ${s.gradeName} ${s.sectionName}`, value: s.idStudent }));
+        return this.students.map((s) => ({
+            label: `${s.person.fullName} — ${s.gradeName ?? ''} ${s.sectionName ?? ''}`.trimEnd(),
+            value: s.idStudent
+        }));
     }
 
+    // StaffResponse: fullName en person.fullName, position directo
     get staffOptions(): { label: string; value: number }[] {
-        return this.staff.map((s) => ({ label: `${s.fullName} (${s.position ?? s.staffType})`, value: s.idStaff }));
+        return this.staff.map((s) => ({
+            label: `${s.person.fullName} (${s.position ?? s.staffType})`,
+            value: s.idStaff
+        }));
     }
 }

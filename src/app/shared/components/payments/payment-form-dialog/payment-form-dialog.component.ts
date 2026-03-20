@@ -1,7 +1,10 @@
 // src/app/shared/components/payments/payment-form-dialog/payment-form-dialog.component.ts
-import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, signal } from '@angular/core';
+
+import { Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
@@ -13,9 +16,11 @@ import { TextareaModule } from 'primeng/textarea';
 import { DividerModule } from 'primeng/divider';
 import { SkeletonModule } from 'primeng/skeleton';
 
-import { PaymentsService, NewPaymentRequest } from '../../../../core/services/conf/payments.service';
-import { StudentMock } from '../../../../shared/data/people.mock';
-import { PaymentInstallmentMock, PaymentMethodMock, MOCK_PAYMENT_PLANS } from '../../../../shared/data/payments.mock';
+// Services
+import { PaymentsService } from '../../../../core/services/api/payments.service';
+import { AuthService } from '../../../../core/services/api/auth.service';
+import { StudentResponse } from '../../../../core/models/student.dto';
+import { PaymentInstallmentResponse, PaymentMethodResponse } from '../../../../core/models/operations.models';
 
 @Component({
     selector: 'app-payment-form-dialog',
@@ -24,9 +29,9 @@ import { PaymentInstallmentMock, PaymentMethodMock, MOCK_PAYMENT_PLANS } from '.
     templateUrl: './payment-form-dialog.component.html',
     styleUrl: './payment-form-dialog.component.scss'
 })
-export class PaymentFormDialogComponent implements OnChanges, OnInit {
-    @Input() students: StudentMock[] = [];
-    @Input() preselectedInstallment: PaymentInstallmentMock | null = null;
+export class PaymentFormDialogComponent implements OnChanges, OnInit, OnDestroy {
+    @Input() students: StudentResponse[] = [];
+    @Input() preselectedInstallment: PaymentInstallmentResponse | null = null;
     @Input() visible = false;
 
     @Output() onSave = new EventEmitter<void>();
@@ -34,19 +39,32 @@ export class PaymentFormDialogComponent implements OnChanges, OnInit {
 
     form!: FormGroup;
     loading = signal(false);
-    payMethods = signal<PaymentMethodMock[]>([]);
-    installments = signal<PaymentInstallmentMock[]>([]);
+    payMethods = signal<PaymentMethodResponse[]>([]);
+    installments = signal<PaymentInstallmentResponse[]>([]);
     loadingInst = signal(false);
+
+    private destroy$ = new Subject<void>();
 
     constructor(
         private fb: FormBuilder,
-        private paymentsService: PaymentsService
+        private paymentsService: PaymentsService,
+        private authService: AuthService
     ) {
         this.buildForm();
     }
 
     ngOnInit(): void {
-        this.paymentsService.getPaymentMethods().subscribe((m) => this.payMethods.set(m));
+        const idCompany = this.authService.idCompany;
+        if (!idCompany) return;
+
+        this.paymentsService
+            .getMethods(idCompany)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: (res) => {
+                    if (res.success) this.payMethods.set(res.data ?? []);
+                }
+            });
     }
 
     ngOnChanges(changes: SimpleChanges): void {
@@ -55,17 +73,15 @@ export class PaymentFormDialogComponent implements OnChanges, OnInit {
             this.installments.set([]);
             this.form.patchValue({
                 paymentDate: new Date().toISOString().split('T')[0],
-                idPaymentMethod: 1
+                idPaymentMethod: this.payMethods()[0]?.idPaymentMethod ?? null
             });
 
             // Cuota preseleccionada (desde botón "Cobrar" en tabla)
+            // PaymentInstallmentResponse ya trae idStudent directamente — no necesitamos MOCK_PAYMENT_PLANS
             if (this.preselectedInstallment) {
                 const inst = this.preselectedInstallment;
-                const plan = MOCK_PAYMENT_PLANS.find((p) => p.idStudentPaymentPlan === inst.idStudentPaymentPlan);
-                if (plan) {
-                    this.form.patchValue({ idStudent: plan.idStudent });
-                    this.loadInstallmentsForStudent(plan.idStudent);
-                }
+                this.form.patchValue({ idStudent: inst.idStudent });
+                this.loadInstallmentsForStudent(inst.idStudent);
                 this.form.patchValue({
                     idPaymentInstallment: inst.idPaymentInstallment,
                     amount: inst.balance
@@ -74,11 +90,18 @@ export class PaymentFormDialogComponent implements OnChanges, OnInit {
         }
     }
 
+    ngOnDestroy(): void {
+        this.destroy$.next();
+        this.destroy$.complete();
+    }
+
+    // ── Form ──────────────────────────────────────────────────────────────────
+
     private buildForm(): void {
         this.form = this.fb.group({
             idStudent: [null, Validators.required],
             idPaymentInstallment: [null],
-            idPaymentMethod: [1, Validators.required],
+            idPaymentMethod: [null, Validators.required],
             amount: [null, [Validators.required, Validators.min(1)]],
             paymentDate: [new Date().toISOString().split('T')[0], Validators.required],
             referenceNumber: [''],
@@ -86,29 +109,44 @@ export class PaymentFormDialogComponent implements OnChanges, OnInit {
         });
 
         // Al cambiar alumno → cargar sus cuotas pendientes
-        this.form.get('idStudent')?.valueChanges.subscribe((id) => {
-            if (id) this.loadInstallmentsForStudent(id);
-            else this.installments.set([]);
-            this.form.patchValue({ idPaymentInstallment: null }, { emitEvent: false });
-        });
+        this.form
+            .get('idStudent')
+            ?.valueChanges.pipe(takeUntil(this.destroy$))
+            .subscribe((id) => {
+                if (id) this.loadInstallmentsForStudent(id);
+                else this.installments.set([]);
+                this.form.patchValue({ idPaymentInstallment: null }, { emitEvent: false });
+            });
 
         // Al seleccionar cuota → auto-rellenar monto con el saldo
-        this.form.get('idPaymentInstallment')?.valueChanges.subscribe((id) => {
-            if (!id) return;
-            const inst = this.installments().find((i) => i.idPaymentInstallment === id);
-            if (inst) {
-                this.form.patchValue({ amount: inst.balance }, { emitEvent: false });
-            }
-        });
+        this.form
+            .get('idPaymentInstallment')
+            ?.valueChanges.pipe(takeUntil(this.destroy$))
+            .subscribe((id) => {
+                if (!id) return;
+                const inst = this.installments().find((i) => i.idPaymentInstallment === id);
+                if (inst) this.form.patchValue({ amount: inst.balance }, { emitEvent: false });
+            });
     }
 
     private loadInstallmentsForStudent(idStudent: number): void {
         this.loadingInst.set(true);
-        this.paymentsService.getInstallments({ idStudent, status: 'PENDING' }).subscribe((list) => {
-            this.installments.set(list);
-            this.loadingInst.set(false);
-        });
+        // GET /api/v1/payments/installments/by-student/{idStudent}
+        // Filtramos PENDING client-side para mostrar solo las pendientes
+        this.paymentsService
+            .getInstallmentsByStudent(idStudent)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: (res) => {
+                    const all = res.success ? (res.data ?? []) : [];
+                    this.installments.set(all.filter((i) => i.status !== 'PAID'));
+                    this.loadingInst.set(false);
+                },
+                error: () => this.loadingInst.set(false)
+            });
     }
+
+    // ── Submit ────────────────────────────────────────────────────────────────
 
     onSubmit(): void {
         if (this.form.invalid) {
@@ -118,7 +156,7 @@ export class PaymentFormDialogComponent implements OnChanges, OnInit {
         this.loading.set(true);
 
         const v = this.form.value;
-        const req: NewPaymentRequest = {
+        const req = {
             idStudent: v.idStudent,
             idPaymentInstallment: v.idPaymentInstallment || undefined,
             idPaymentMethod: v.idPaymentMethod,
@@ -128,13 +166,16 @@ export class PaymentFormDialogComponent implements OnChanges, OnInit {
             notes: v.notes || undefined
         };
 
-        this.paymentsService.registerPayment(req).subscribe({
-            next: () => {
-                this.loading.set(false);
-                this.onSave.emit();
-            },
-            error: () => this.loading.set(false)
-        });
+        this.paymentsService
+            .registerPayment(req)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: (res) => {
+                    this.loading.set(false);
+                    if (res.success) this.onSave.emit();
+                },
+                error: () => this.loading.set(false)
+            });
     }
 
     close(): void {
@@ -147,9 +188,12 @@ export class PaymentFormDialogComponent implements OnChanges, OnInit {
         return !!(c?.invalid && c?.touched);
     }
 
+    // ── Options ───────────────────────────────────────────────────────────────
+
+    // StudentResponse: fullName en person.fullName
     get studentOptions(): { label: string; value: number }[] {
         return this.students.map((s) => ({
-            label: `${s.fullName} — ${s.gradeName} ${s.sectionName}`,
+            label: `${s.person.fullName} — ${s.gradeName ?? ''} ${s.sectionName ?? ''}`.trimEnd(),
             value: s.idStudent
         }));
     }
@@ -167,8 +211,7 @@ export class PaymentFormDialogComponent implements OnChanges, OnInit {
 
     get requiresReference(): boolean {
         const methodId = this.form.get('idPaymentMethod')?.value;
-        const method = this.payMethods().find((m) => m.idPaymentMethod === methodId);
-        return method?.requiresReference ?? false;
+        return this.payMethods().find((m) => m.idPaymentMethod === methodId)?.requiresReference ?? false;
     }
 
     formatCurrency(n: number): string {

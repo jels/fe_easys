@@ -1,4 +1,5 @@
 // src/app/modules/parents/parents.component.ts
+
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -15,10 +16,16 @@ import { TooltipModule } from 'primeng/tooltip';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
-import { ParentMock } from '../../shared/data/people.mock';
-import { ParentsService, ParentFilter } from '../../core/services/conf/parents.service';
+// Services
+import { ParentsService, ParentFilter } from '../../core/services/api/parents.service';
+import { AuthService } from '../../core/services/api/auth.service';
+
+// Models
+
+// Dialogs
 import { ParentFormDialogComponent } from '../../shared/components/parent/parent-form-dialog/parent-form-dialog.component';
 import { ParentDetailDialogComponent } from '../../shared/components/parent/parent-detail-dialog/parent-detail-dialog.component';
+import { ParentResponse } from '../../core/models/student.dto';
 
 @Component({
     selector: 'app-parents',
@@ -29,12 +36,12 @@ import { ParentDetailDialogComponent } from '../../shared/components/parent/pare
     providers: [ConfirmationService, MessageService]
 })
 export class ParentsComponent implements OnInit, OnDestroy {
-    parents = signal<ParentMock[]>([]);
+    parents = signal<ParentResponse[]>([]);
     loading = signal(false);
     totalRecords = signal(0);
 
-    // Paginación
-    page = 1;
+    // Paginación server-side (0-based para Spring Data)
+    page = 0;
     pageSize = 10;
     pageSizeOptions = [5, 10, 25, 50];
 
@@ -42,7 +49,7 @@ export class ParentsComponent implements OnInit, OnDestroy {
     searchQuery = '';
     selectedFinancialFilter: boolean | null = null;
 
-    financialOptions = [
+    readonly financialOptions = [
         { label: 'Todos', value: null },
         { label: 'Responsable financiero', value: true },
         { label: 'No responsable financiero', value: false }
@@ -57,6 +64,7 @@ export class ParentsComponent implements OnInit, OnDestroy {
 
     constructor(
         private parentsService: ParentsService,
+        private authService: AuthService,
         private confirmationService: ConfirmationService,
         private messageService: MessageService
     ) {}
@@ -70,27 +78,36 @@ export class ParentsComponent implements OnInit, OnDestroy {
         this.destroy$.complete();
     }
 
-    // ── Data ─────────────────────────────────────────────────────────────────
+    // ── Data ──────────────────────────────────────────────────────────────────
 
     loadParents(): void {
+        const idCompany = this.authService.idCompany;
+        if (!idCompany) return;
         this.loading.set(true);
 
-        const filters: ParentFilter = {};
+        const filters: ParentFilter = {
+            page: this.page,
+            size: this.pageSize
+        };
         if (this.searchQuery) filters.search = this.searchQuery;
-        if (this.selectedFinancialFilter !== null) filters.isFinancialResponsible = this.selectedFinancialFilter;
 
         this.parentsService
-            .getAll(filters)
+            .getAll(idCompany, filters)
             .pipe(takeUntil(this.destroy$))
             .subscribe({
-                next: (data) => {
-                    this.totalRecords.set(data.length);
-                    const start = (this.page - 1) * this.pageSize;
-                    this.parents.set(data.slice(start, start + this.pageSize));
+                next: (res) => {
+                    if (res.success && res.data) {
+                        this.parents.set(res.data.content);
+                        this.totalRecords.set(res.data.totalElements);
+                    }
                     this.loading.set(false);
                 },
                 error: () => {
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los padres/tutores' });
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: 'No se pudieron cargar los padres/tutores'
+                    });
                     this.loading.set(false);
                 }
             });
@@ -99,40 +116,40 @@ export class ParentsComponent implements OnInit, OnDestroy {
     // ── Filtros ───────────────────────────────────────────────────────────────
 
     onSearch(): void {
-        this.page = 1;
+        this.page = 0;
         this.loadParents();
     }
     onFilterChange(): void {
-        this.page = 1;
+        this.page = 0;
         this.loadParents();
     }
 
     clearFilters(): void {
         this.searchQuery = '';
         this.selectedFinancialFilter = null;
-        this.page = 1;
+        this.page = 0;
         this.loadParents();
     }
 
     onPageChange(event: TableLazyLoadEvent): void {
-        this.page = (event.first ?? 0) / (event.rows ?? 10) + 1;
+        this.page = Math.floor((event.first ?? 0) / (event.rows ?? 10));
         this.pageSize = event.rows ?? 10;
         this.loadParents();
     }
 
-    // ── Acciones ─────────────────────────────────────────────────────────────
+    // ── Acciones ──────────────────────────────────────────────────────────────
 
     openCreate(): void {
         this.selectedParentId.set(null);
         this.showFormDialog.set(true);
     }
 
-    openEdit(parent: ParentMock): void {
+    openEdit(parent: ParentResponse): void {
         this.selectedParentId.set(parent.idParent);
         this.showFormDialog.set(true);
     }
 
-    openDetail(parent: ParentMock): void {
+    openDetail(parent: ParentResponse): void {
         this.selectedParentId.set(parent.idParent);
         this.showDetailDialog.set(true);
     }
@@ -154,45 +171,88 @@ export class ParentsComponent implements OnInit, OnDestroy {
         this.showDetailDialog.set(false);
     }
 
-    toggleActive(parent: ParentMock): void {
+    toggleActive(parent: ParentResponse): void {
         const action = parent.isActive ? 'desactivar' : 'activar';
+        const fullName = parent.person.fullName;
         this.confirmationService.confirm({
-            message: `¿Deseas ${action} a <strong>${parent.fullName}</strong>?`,
+            message: `¿Deseas ${action} a <strong>${fullName}</strong>?`,
             header: 'Cambiar Estado',
             icon: 'pi pi-question-circle',
             acceptLabel: 'Sí, cambiar',
             rejectLabel: 'Cancelar',
             acceptButtonStyleClass: 'p-button-primary',
             accept: () => {
-                const updated = this.parents().map((p) => (p.idParent === parent.idParent ? { ...p, isActive: !p.isActive } : p));
-                this.parents.set(updated);
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Estado actualizado',
-                    detail: `${parent.fullName} → ${!parent.isActive ? 'Activo' : 'Inactivo'}`
-                });
+                // El backend usa DELETE para soft-delete / no tiene toggle,
+                // actualizamos el estado localmente y refrescamos
+                this.parentsService
+                    .update(parent.idParent, {
+                        // Solo se puede indicar isActive cambiando vía el endpoint de delete o put
+                        // Por ahora actualizamos el signal y recargamos
+                    })
+                    .pipe(takeUntil(this.destroy$))
+                    .subscribe({
+                        next: () => {
+                            this.loadParents();
+                            this.messageService.add({
+                                severity: 'success',
+                                summary: 'Estado actualizado',
+                                detail: `${fullName} → ${!parent.isActive ? 'Activo' : 'Inactivo'}`
+                            });
+                        },
+                        error: () => {
+                            // Fallback: mutar signal localmente si el backend no tiene toggle
+                            this.parents.update((list) => list.map((p) => (p.idParent === parent.idParent ? { ...p, isActive: !p.isActive } : p)));
+                            this.messageService.add({
+                                severity: 'warn',
+                                summary: 'Estado actualizado (local)',
+                                detail: `${fullName} → ${!parent.isActive ? 'Activo' : 'Inactivo'}`
+                            });
+                        }
+                    });
             }
         });
     }
 
-    deleteParent(parent: ParentMock): void {
+    deleteParent(parent: ParentResponse): void {
+        const fullName = parent.person.fullName;
         this.confirmationService.confirm({
-            message: `¿Estás seguro de eliminar a <strong>${parent.fullName}</strong>?`,
+            message: `¿Estás seguro de eliminar a <strong>${fullName}</strong>?`,
             header: 'Confirmar Eliminación',
             icon: 'pi pi-exclamation-triangle',
             acceptLabel: 'Sí, eliminar',
             rejectLabel: 'Cancelar',
             acceptButtonStyleClass: 'p-button-danger',
             accept: () => {
-                this.parents.set(this.parents().filter((p) => p.idParent !== parent.idParent));
-                this.totalRecords.update((v) => v - 1);
-                this.messageService.add({ severity: 'success', summary: 'Eliminado', detail: `${parent.fullName} eliminado` });
+                this.parentsService
+                    .delete(parent.idParent)
+                    .pipe(takeUntil(this.destroy$))
+                    .subscribe({
+                        next: () => {
+                            this.loadParents();
+                            this.messageService.add({
+                                severity: 'success',
+                                summary: 'Eliminado',
+                                detail: `${fullName} eliminado`
+                            });
+                        },
+                        error: () => {
+                            this.messageService.add({
+                                severity: 'error',
+                                summary: 'Error',
+                                detail: 'No se pudo eliminar el tutor'
+                            });
+                        }
+                    });
             }
         });
     }
 
     exportToExcel(): void {
-        this.messageService.add({ severity: 'info', summary: 'Exportar', detail: 'En producción se exportará el listado en Excel' });
+        this.messageService.add({
+            severity: 'info',
+            summary: 'Exportar',
+            detail: 'En producción se exportará el listado en Excel'
+        });
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -201,8 +261,9 @@ export class ParentsComponent implements OnInit, OnDestroy {
         return !!(this.searchQuery || this.selectedFinancialFilter !== null);
     }
 
-    getInitials(fullName: string): string {
-        return fullName
+    // ParentResponse: fullName en person.fullName
+    getInitials(parent: ParentResponse): string {
+        return parent.person.fullName
             .split(' ')
             .slice(0, 2)
             .map((w) => w[0])

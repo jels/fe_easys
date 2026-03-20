@@ -1,4 +1,5 @@
 // src/app/modules/events/events.component.ts
+
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -20,11 +21,19 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
-import { EventsService, EventFilter, CreateEventRequest } from '../../core/services/conf/events.service';
-import { EventMock, EventRegistrationMock, EventTypeMock } from '../../shared/data/operations.mock';
-import { StudentMock } from '../../shared/data/people.mock';
-import { MOCK_SCHOOL_YEARS } from '../../shared/data/academic.mock';
+// Services
+import { EventsService } from '../../core/services/api/events.service';
+import { StudentsService } from '../../core/services/api/students.service';
+import { SettingsService } from '../../core/services/api/settings.service';
+import { AuthService } from '../../core/services/api/auth.service';
+
+// Models
+import { EventTypeResponse, EventResponse, EventRegistrationResponse, EventStatsResponse, CreateEventRequest, RegisterStudentEventRequest } from '../../core/models/events.models';
+import { SchoolYearResponse } from '../../core/models/settings.models';
+
+// Pipes
 import { EventTypeCountPipe } from '../../shared/pipes/event-type-count.pipe';
+import { StudentResponse } from '../../core/models/student.dto';
 
 @Component({
     selector: 'app-events',
@@ -57,11 +66,12 @@ export class EventsComponent implements OnInit, OnDestroy {
     activeTab = signal('0');
 
     // ── Datos de referencia ───────────────────────────────────────────────────
-    eventTypes = signal<EventTypeMock[]>([]);
-    stats = signal<any>(null);
+    eventTypes = signal<EventTypeResponse[]>([]);
+    stats = signal<EventStatsResponse | null>(null);
+    schoolYears = signal<SchoolYearResponse[]>([]);
 
     // ── Tab 0: Lista ──────────────────────────────────────────────────────────
-    events = signal<EventMock[]>([]);
+    events = signal<EventResponse[]>([]);
     loadingEvents = signal(false);
     searchEvent = '';
     filterStatus: string | null = null;
@@ -70,21 +80,18 @@ export class EventsComponent implements OnInit, OnDestroy {
 
     // ── Tab 1: Calendario ─────────────────────────────────────────────────────
     calendarYear = signal(new Date().getFullYear());
-    calendarMonth = signal(new Date().getMonth() + 1); // 1-12
-    calendarEvents = signal<EventMock[]>([]);
+    calendarMonth = signal(new Date().getMonth() + 1);
+    calendarEvents = signal<EventResponse[]>([]);
     loadingCalendar = signal(false);
 
     // ── Tab 2: Inscripciones ──────────────────────────────────────────────────
-    selectedEventForReg = signal<EventMock | null>(null);
-    registrations = signal<EventRegistrationMock[]>([]);
-    availableStudents = signal<StudentMock[]>([]);
+    selectedEventForReg = signal<EventResponse | null>(null);
+    registrations = signal<EventRegistrationResponse[]>([]);
+    availableStudents = signal<StudentResponse[]>([]);
     loadingReg = signal(false);
     showRegDialog = signal(false);
-    selectedStudentToReg: StudentMock | null = null;
+    selectedStudentToReg: StudentResponse | null = null;
     regNotes = '';
-
-    // ── Tab 3: Tipos ──────────────────────────────────────────────────────────
-    // Solo lectura en demo
 
     // ── Modal: Nuevo Evento ───────────────────────────────────────────────────
     showEventForm = signal(false);
@@ -92,8 +99,9 @@ export class EventsComponent implements OnInit, OnDestroy {
     eventForm!: FormGroup;
 
     // ── Modal: Detalle del Evento ─────────────────────────────────────────────
-    showDetail = signal(false);
-    selectedEvent = signal<EventMock | null>(null);
+    // p-dialog usa [(visible)] con two-way binding — se mantiene como propiedad
+    showDetail = false;
+    selectedEvent = signal<EventResponse | null>(null);
     loadingDetail = signal(false);
 
     readonly MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -112,19 +120,14 @@ export class EventsComponent implements OnInit, OnDestroy {
         { label: 'Grado', value: 'GRADE' },
         { label: 'Sección', value: 'SECTION' }
     ];
-    readonly nextStatusMap: Record<string, { label: string; value: string; severity: string }> = {
-        PLANNED: { label: 'Iniciar', value: 'ACTIVE', severity: 'success' },
-        ACTIVE: { label: 'Completar', value: 'COMPLETED', severity: 'info' },
-        COMPLETED: { label: 'Completado', value: 'COMPLETED', severity: 'secondary' },
-        CANCELLED: { label: 'Cancelado', value: 'CANCELLED', severity: 'secondary' }
-    };
-
-    readonly schoolYears = MOCK_SCHOOL_YEARS;
 
     private destroy$ = new Subject<void>();
 
     constructor(
         private eventsService: EventsService,
+        private studentsService: StudentsService,
+        private settingsService: SettingsService,
+        private authService: AuthService,
         private fb: FormBuilder,
         private messageService: MessageService,
         private confirmationService: ConfirmationService
@@ -143,49 +146,65 @@ export class EventsComponent implements OnInit, OnDestroy {
         this.destroy$.complete();
     }
 
-    // ── Carga ─────────────────────────────────────────────────────────────────
+    // ── Carga de referencia ───────────────────────────────────────────────────
 
     loadReferenceData(): void {
-        this.eventsService
-            .getEventTypes()
-            .pipe(takeUntil(this.destroy$))
-            .subscribe((t) => this.eventTypes.set(t));
+        const idCompany = this.authService.idCompany;
+        if (!idCompany) return;
 
         this.eventsService
-            .getEventStats()
+            .getEventTypes(idCompany)
             .pipe(takeUntil(this.destroy$))
-            .subscribe((s) => this.stats.set(s));
+            .subscribe({
+                next: (res) => {
+                    if (res.success) this.eventTypes.set(res.data ?? []);
+                }
+            });
+
+        this.eventsService
+            .getStats(idCompany)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: (res) => {
+                    if (res.success) this.stats.set(res.data ?? null);
+                }
+            });
+
+        this.settingsService
+            .getSchoolYears(idCompany)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: (res) => {
+                    if (res.success) this.schoolYears.set(res.data ?? []);
+                }
+            });
     }
+
+    // ── Tab 0: Lista ──────────────────────────────────────────────────────────
 
     loadEvents(): void {
+        const idCompany = this.authService.idCompany;
+        if (!idCompany) return;
         this.loadingEvents.set(true);
-        const f: EventFilter = {};
-        if (this.searchEvent) f.search = this.searchEvent;
-        if (this.filterStatus) f.status = this.filterStatus;
-        if (this.filterType) f.idEventType = this.filterType;
-        if (this.filterScope) f.scope = this.filterScope;
 
         this.eventsService
-            .getEvents(f)
+            .getEvents(idCompany, {
+                search: this.searchEvent || undefined,
+                status: this.filterStatus || undefined,
+                idEventType: this.filterType || undefined
+            })
             .pipe(takeUntil(this.destroy$))
-            .subscribe((data) => {
-                this.events.set(data);
-                this.loadingEvents.set(false);
+            .subscribe({
+                next: (res) => {
+                    let data = res.success ? (res.data?.content ?? []) : [];
+                    // filtro de scope client-side (el backend puede no soportarlo)
+                    if (this.filterScope) data = data.filter((e) => e.scope === this.filterScope);
+                    this.events.set(data);
+                    this.loadingEvents.set(false);
+                },
+                error: () => this.loadingEvents.set(false)
             });
     }
-
-    loadCalendar(): void {
-        this.loadingCalendar.set(true);
-        this.eventsService
-            .getEventsByMonth(this.calendarYear(), this.calendarMonth())
-            .pipe(takeUntil(this.destroy$))
-            .subscribe((data) => {
-                this.calendarEvents.set(data);
-                this.loadingCalendar.set(false);
-            });
-    }
-
-    // ── Filtros ───────────────────────────────────────────────────────────────
 
     onSearch(): void {
         this.loadEvents();
@@ -206,28 +225,30 @@ export class EventsComponent implements OnInit, OnDestroy {
 
     // ── Detalle ───────────────────────────────────────────────────────────────
 
-    openDetail(event: EventMock): void {
+    openDetail(event: EventResponse): void {
         this.loadingDetail.set(true);
-        this.showDetail.set(true);
+        this.showDetail = true;
         this.eventsService
             .getEventById(event.idEvent)
             .pipe(takeUntil(this.destroy$))
-            .subscribe((e) => {
-                this.selectedEvent.set(e ?? null);
-                this.loadingDetail.set(false);
+            .subscribe({
+                next: (res) => {
+                    this.selectedEvent.set(res.success ? (res.data ?? null) : null);
+                    this.loadingDetail.set(false);
+                },
+                error: () => this.loadingDetail.set(false)
             });
     }
 
     closeDetail(): void {
-        this.showDetail.set(false);
+        this.showDetail = false;
         this.selectedEvent.set(null);
     }
 
     // ── Cambio de estado ──────────────────────────────────────────────────────
 
-    changeStatus(event: EventMock, newStatus: string): void {
+    changeStatus(event: EventResponse, newStatus: string): void {
         if (event.status === newStatus) return;
-
         const label = newStatus === 'ACTIVE' ? 'iniciar' : 'completar';
         this.confirmationService.confirm({
             message: `¿Confirma que desea ${label} el evento "${event.name}"?`,
@@ -237,34 +258,37 @@ export class EventsComponent implements OnInit, OnDestroy {
                 this.eventsService
                     .updateStatus(event.idEvent, newStatus)
                     .pipe(takeUntil(this.destroy$))
-                    .subscribe(() => {
-                        this.loadEvents();
-                        if (this.selectedEvent()?.idEvent === event.idEvent) {
-                            this.openDetail(event);
+                    .subscribe({
+                        next: () => {
+                            this.loadEvents();
+                            if (this.selectedEvent()?.idEvent === event.idEvent) {
+                                this.openDetail(event);
+                            }
+                            this.messageService.add({
+                                severity: 'success',
+                                summary: 'Estado actualizado',
+                                detail: `Evento marcado como ${this.getStatusLabel(newStatus)}`
+                            });
                         }
-                        this.messageService.add({
-                            severity: 'success',
-                            summary: 'Estado actualizado',
-                            detail: `Evento marcado como ${this.getStatusLabel(newStatus)}`
-                        });
                     });
             }
         });
     }
 
-    cancelEvent(event: EventMock): void {
+    cancelEvent(event: EventResponse): void {
         this.confirmationService.confirm({
             message: `¿Cancelar el evento "${event.name}"? Esta acción no se puede deshacer.`,
             header: 'Cancelar evento',
             icon: 'pi pi-exclamation-triangle',
-            // acceptSeverity: 'danger',
             accept: () => {
                 this.eventsService
                     .updateStatus(event.idEvent, 'CANCELLED')
                     .pipe(takeUntil(this.destroy$))
-                    .subscribe(() => {
-                        this.loadEvents();
-                        this.messageService.add({ severity: 'warn', summary: 'Evento cancelado' });
+                    .subscribe({
+                        next: () => {
+                            this.loadEvents();
+                            this.messageService.add({ severity: 'warn', summary: 'Evento cancelado' });
+                        }
                     });
             }
         });
@@ -275,7 +299,7 @@ export class EventsComponent implements OnInit, OnDestroy {
     private buildForm(): void {
         this.eventForm = this.fb.group({
             idEventType: [null, Validators.required],
-            idSchoolYear: [1, Validators.required],
+            idSchoolYear: [null, Validators.required],
             name: ['', Validators.required],
             description: [''],
             eventDate: [null, Validators.required],
@@ -293,7 +317,10 @@ export class EventsComponent implements OnInit, OnDestroy {
     }
 
     openNewEvent(): void {
-        this.eventForm.reset({ scope: 'GENERAL', requiresPayment: false, idSchoolYear: 1 });
+        // Pre-seleccionar el año activo
+        const activeYear = this.schoolYears().find((y) => y.isActive);
+        this.eventForm.reset({ scope: 'GENERAL', requiresPayment: false });
+        if (activeYear) this.eventForm.patchValue({ idSchoolYear: activeYear.idSchoolYear });
         this.showEventForm.set(true);
     }
 
@@ -302,10 +329,13 @@ export class EventsComponent implements OnInit, OnDestroy {
             this.eventForm.markAllAsTouched();
             return;
         }
+        const idCompany = this.authService.idCompany;
+        if (!idCompany) return;
         this.loadingForm.set(true);
-        const v = this.eventForm.value;
 
+        const v = this.eventForm.value;
         const req: CreateEventRequest = {
+            idCompany,
             idEventType: v.idEventType,
             idSchoolYear: v.idSchoolYear,
             name: v.name,
@@ -327,13 +357,15 @@ export class EventsComponent implements OnInit, OnDestroy {
             .createEvent(req)
             .pipe(takeUntil(this.destroy$))
             .subscribe({
-                next: () => {
+                next: (res) => {
                     this.loadingForm.set(false);
-                    this.showEventForm.set(false);
-                    this.loadEvents();
-                    this.loadCalendar();
-                    this.loadReferenceData();
-                    this.messageService.add({ severity: 'success', summary: 'Evento creado', detail: req.name });
+                    if (res.success) {
+                        this.showEventForm.set(false);
+                        this.loadEvents();
+                        this.loadCalendar();
+                        this.loadReferenceData();
+                        this.messageService.add({ severity: 'success', summary: 'Evento creado', detail: req.name });
+                    }
                 },
                 error: () => this.loadingForm.set(false)
             });
@@ -341,7 +373,7 @@ export class EventsComponent implements OnInit, OnDestroy {
 
     // ── Inscripciones ─────────────────────────────────────────────────────────
 
-    selectEventForReg(event: EventMock): void {
+    selectEventForReg(event: EventResponse): void {
         this.selectedEventForReg.set(event);
         this.loadRegistrations(event.idEvent);
     }
@@ -351,45 +383,60 @@ export class EventsComponent implements OnInit, OnDestroy {
         this.eventsService
             .getRegistrationsByEvent(idEvent)
             .pipe(takeUntil(this.destroy$))
-            .subscribe((r) => {
-                this.registrations.set(r);
-                this.loadingReg.set(false);
+            .subscribe({
+                next: (res) => {
+                    this.registrations.set(res.success ? (res.data ?? []) : []);
+                    this.loadingReg.set(false);
+                },
+                error: () => this.loadingReg.set(false)
             });
     }
 
     openRegDialog(): void {
         if (!this.selectedEventForReg()) return;
-        this.eventsService
-            .getAvailableStudents(this.selectedEventForReg()!.idEvent)
+        const idCompany = this.authService.idCompany;
+        if (!idCompany) return;
+
+        // Cargar alumnos disponibles: todos activos, filtramos los ya inscriptos client-side
+        this.studentsService
+            .getAll(idCompany, { size: 500 })
             .pipe(takeUntil(this.destroy$))
-            .subscribe((s) => {
-                this.availableStudents.set(s);
-                this.selectedStudentToReg = null;
-                this.regNotes = '';
-                this.showRegDialog.set(true);
+            .subscribe({
+                next: (res) => {
+                    const all = res.success ? (res.data?.content ?? []) : [];
+                    const registeredIds = new Set(this.registrations().map((r) => r.idStudent));
+                    this.availableStudents.set(all.filter((s) => !registeredIds.has(s.idStudent)));
+                    this.selectedStudentToReg = null;
+                    this.regNotes = '';
+                    this.showRegDialog.set(true);
+                }
             });
     }
 
     submitRegistration(): void {
         if (!this.selectedStudentToReg || !this.selectedEventForReg()) return;
+
+        const req: RegisterStudentEventRequest = {
+            idEvent: this.selectedEventForReg()!.idEvent,
+            idStudent: this.selectedStudentToReg.idStudent
+        };
+
         this.eventsService
-            .registerStudent({
-                idEvent: this.selectedEventForReg()!.idEvent,
-                idStudent: this.selectedStudentToReg.idStudent,
-                notes: this.regNotes || undefined
-            })
+            .registerStudent(req)
             .pipe(takeUntil(this.destroy$))
             .subscribe({
-                next: () => {
-                    this.showRegDialog.set(false);
-                    this.loadRegistrations(this.selectedEventForReg()!.idEvent);
-                    this.loadEvents();
-                    this.messageService.add({ severity: 'success', summary: 'Alumno inscripto' });
+                next: (res) => {
+                    if (res.success) {
+                        this.showRegDialog.set(false);
+                        this.loadRegistrations(this.selectedEventForReg()!.idEvent);
+                        this.loadEvents();
+                        this.messageService.add({ severity: 'success', summary: 'Alumno inscripto' });
+                    }
                 }
             });
     }
 
-    cancelReg(reg: EventRegistrationMock): void {
+    cancelReg(reg: EventRegistrationResponse): void {
         this.confirmationService.confirm({
             message: `¿Cancelar inscripción de ${reg.studentName}?`,
             header: 'Cancelar inscripción',
@@ -398,15 +445,42 @@ export class EventsComponent implements OnInit, OnDestroy {
                 this.eventsService
                     .cancelRegistration(reg.idEventRegistration)
                     .pipe(takeUntil(this.destroy$))
-                    .subscribe(() => {
-                        this.loadRegistrations(reg.idEvent);
-                        this.messageService.add({ severity: 'warn', summary: 'Inscripción cancelada' });
+                    .subscribe({
+                        next: () => {
+                            this.loadRegistrations(reg.idEvent);
+                            this.messageService.add({ severity: 'warn', summary: 'Inscripción cancelada' });
+                        }
                     });
             }
         });
     }
 
     // ── Calendario ────────────────────────────────────────────────────────────
+
+    loadCalendar(): void {
+        const idCompany = this.authService.idCompany;
+        if (!idCompany) return;
+        this.loadingCalendar.set(true);
+
+        const y = this.calendarYear();
+        const m = String(this.calendarMonth()).padStart(2, '0');
+        const lastDay = new Date(y, this.calendarMonth(), 0).getDate();
+
+        this.eventsService
+            .getEvents(idCompany, {
+                dateFrom: `${y}-${m}-01`,
+                dateTo: `${y}-${m}-${lastDay}`,
+                size: 100
+            })
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: (res) => {
+                    this.calendarEvents.set(res.success ? (res.data?.content ?? []) : []);
+                    this.loadingCalendar.set(false);
+                },
+                error: () => this.loadingCalendar.set(false)
+            });
+    }
 
     prevMonth(): void {
         if (this.calendarMonth() === 1) {
@@ -431,18 +505,16 @@ export class EventsComponent implements OnInit, OnDestroy {
     getCalendarDays(): (number | null)[] {
         const year = this.calendarYear();
         const month = this.calendarMonth();
-        const firstDay = new Date(year, month - 1, 1).getDay(); // 0=Dom
+        const firstDay = new Date(year, month - 1, 1).getDay();
         const daysInMonth = new Date(year, month, 0).getDate();
-        // Ajustar: semana empieza en Lunes (0=Lun … 6=Dom)
         const offset = firstDay === 0 ? 6 : firstDay - 1;
         const days: (number | null)[] = Array(offset).fill(null);
         for (let d = 1; d <= daysInMonth; d++) days.push(d);
-        // Rellenar hasta múltiplo de 7
         while (days.length % 7 !== 0) days.push(null);
         return days;
     }
 
-    getEventsForDay(day: number): EventMock[] {
+    getEventsForDay(day: number): EventResponse[] {
         const dateStr = `${this.calendarYear()}-${String(this.calendarMonth()).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         return this.calendarEvents().filter((e) => e.eventDate === dateStr);
     }
@@ -455,48 +527,23 @@ export class EventsComponent implements OnInit, OnDestroy {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     getStatusLabel(s: string): string {
-        const m: Record<string, string> = {
-            PLANNED: 'Planificado',
-            ACTIVE: 'Activo',
-            COMPLETED: 'Completado',
-            CANCELLED: 'Cancelado'
-        };
-        return m[s] ?? s;
+        return ({ PLANNED: 'Planificado', ACTIVE: 'Activo', COMPLETED: 'Completado', CANCELLED: 'Cancelado' } as Record<string, string>)[s] ?? s;
     }
 
     getStatusSeverity(s: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
-        const m: Record<string, 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast'> = {
-            PLANNED: 'info',
-            ACTIVE: 'success',
-            COMPLETED: 'secondary',
-            CANCELLED: 'danger'
-        };
-        return m[s] ?? 'secondary';
+        return ({ PLANNED: 'info', ACTIVE: 'success', COMPLETED: 'secondary', CANCELLED: 'danger' } as Record<string, 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast'>)[s] ?? 'secondary';
     }
 
     getScopeLabel(s: string): string {
-        const m: Record<string, string> = { GENERAL: 'General', GRADE: 'Grado', SECTION: 'Sección' };
-        return m[s] ?? s;
+        return ({ GENERAL: 'General', GRADE: 'Grado', SECTION: 'Sección' } as Record<string, string>)[s] ?? s;
     }
 
     getRegStatusLabel(s: string): string {
-        const m: Record<string, string> = {
-            REGISTERED: 'Inscripto',
-            CONFIRMED: 'Confirmado',
-            CANCELLED: 'Cancelado',
-            ATTENDED: 'Asistió'
-        };
-        return m[s] ?? s;
+        return ({ REGISTERED: 'Inscripto', CONFIRMED: 'Confirmado', CANCELLED: 'Cancelado', ATTENDED: 'Asistió' } as Record<string, string>)[s] ?? s;
     }
 
     getRegStatusSeverity(s: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
-        const m: Record<string, 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast'> = {
-            REGISTERED: 'info',
-            CONFIRMED: 'success',
-            CANCELLED: 'danger',
-            ATTENDED: 'contrast'
-        };
-        return m[s] ?? 'secondary';
+        return ({ REGISTERED: 'info', CONFIRMED: 'success', CANCELLED: 'danger', ATTENDED: 'contrast' } as Record<string, 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast'>)[s] ?? 'secondary';
     }
 
     getTypeColor(idEventType: number): string {
@@ -511,15 +558,12 @@ export class EventsComponent implements OnInit, OnDestroy {
         return [{ label: 'Todos los tipos', value: null }, ...this.eventTypes().map((t) => ({ label: t.name, value: t.idEventType }))];
     }
 
-    get studentOptions(): { label: string; value: StudentMock }[] {
+    // StudentResponse: fullName en person.fullName
+    get studentOptions(): { label: string; value: StudentResponse }[] {
         return this.availableStudents().map((s) => ({
-            label: `${s.fullName} — ${s.gradeName} ${s.sectionName}`,
+            label: `${s.person.fullName} — ${s.gradeName ?? ''} ${s.sectionName ?? ''}`.trimEnd(),
             value: s
         }));
-    }
-
-    get eventOptions(): { label: string; value: EventMock }[] {
-        return this.events().map((e) => ({ label: `${e.name} (${e.eventDate})`, value: e }));
     }
 
     get typeFormOptions(): { label: string; value: number }[] {
@@ -527,7 +571,7 @@ export class EventsComponent implements OnInit, OnDestroy {
     }
 
     get schoolYearOptions(): { label: string; value: number }[] {
-        return MOCK_SCHOOL_YEARS.map((y) => ({ label: y.name, value: y.idSchoolYear }));
+        return this.schoolYears().map((y) => ({ label: y.name, value: y.idSchoolYear }));
     }
 
     isFieldInvalid(path: string): boolean {

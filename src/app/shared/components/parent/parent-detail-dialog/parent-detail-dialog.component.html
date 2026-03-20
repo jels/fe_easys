@@ -135,37 +135,38 @@
             </p-tabpanel>
 
             <!-- ── TAB 2: Estudiantes vinculados ────────────────────────── -->
+            <!-- linkedStudents es StudentParentResponse[] — campos directos sin .student ni .relation -->
             <p-tabpanel value="1">
-                @if (linkedStudents().length === 0) {
+                @if (loadingStudents()) {
+                <p-skeleton height="120px" />
+                } @else if (linkedStudents().length === 0) {
                 <div class="empty-tab">
                     <i class="pi pi-users"></i>
                     <p>No hay estudiantes vinculados a este tutor</p>
                 </div>
                 } @else {
                 <div class="students-grid">
-                    @for (item of linkedStudents(); track item.student.idStudent) {
+                    @for (item of linkedStudents(); track item.idStudent) {
                     <div class="student-card">
                         <div class="student-card-avatar">
                             <i class="pi pi-user"></i>
                         </div>
                         <div class="student-card-info">
-                            <div class="student-card-name">{{ item.student.fullName }}</div>
-                            <div class="student-card-sub">{{ item.student.enrollmentNumber }}</div>
+                            <div class="student-card-name">{{ item.studentName }}</div>
                             <div class="student-card-sub">
-                                {{ item.student.gradeName }} – {{ item.student.sectionName }}
+                                {{ item.gradeName ?? '' }}
+                                @if (item.sectionName) { – {{ item.sectionName }} }
                             </div>
                         </div>
                         <div class="student-card-badges">
-                            <p-tag [value]="getRelationshipLabel(item.relation.relationship)" severity="info"
+                            <p-tag [value]="getRelationshipLabel(item.relationship)" severity="info"
                                 styleClass="mb-1 block text-xs" />
-                            @if (item.relation.isPrimaryContact) {
+                            @if (item.isPrimaryContact) {
                             <p-tag value="Contacto principal" severity="success" styleClass="block text-xs" />
                             }
-                            @if (item.relation.isAuthorizedPickup) {
+                            @if (item.isAuthorizedPickup) {
                             <p-tag value="Autorizado retiro" severity="warn" styleClass="block text-xs mt-1" />
                             }
-                            <p-tag [value]="getStatusLabel(item.student.status)"
-                                [severity]="getStatusSeverity(item.student.status)" styleClass="block text-xs mt-1" />
                         </div>
                     </div>
                     }
@@ -175,6 +176,9 @@
 
             <!-- ── TAB 3: Historial de Pagos ────────────────────────────── -->
             <p-tabpanel value="2">
+                @if (loadingPayments()) {
+                <p-skeleton height="120px" />
+                } @else {
                 @if (payments().length > 0) {
                 <div class="payments-summary">
                     <div class="summary-item">
@@ -194,7 +198,6 @@
                         <tr>
                             <th>Recibo</th>
                             <th>Estudiante</th>
-                            <th>Concepto</th>
                             <th>Fecha</th>
                             <th class="text-right">Monto</th>
                             <th>Método</th>
@@ -203,35 +206,36 @@
                     </ng-template>
                     <ng-template pTemplate="body" let-payment>
                         <tr>
-                            <td>
-                                <span class="mono text-sm">{{ payment.receiptNumber }}</span>
-                            </td>
+                            <td><span class="mono text-sm">{{ payment.receiptNumber ?? '–' }}</span></td>
                             <td>{{ payment.studentName }}</td>
-                            <td>{{ payment.conceptName }}</td>
                             <td>{{ payment.paymentDate }}</td>
-                            <td class="text-right mono font-semibold">
-                                {{ formatCurrency(payment.amount) }}
-                            </td>
+                            <td class="text-right mono font-semibold">{{ formatCurrency(payment.amount) }}</td>
+                            <!-- PaymentResponse: paymentMethodName directo -->
                             <td>{{ payment.paymentMethodName }}</td>
                             <td class="text-center">
-                                <p-tag [value]="payment.status === 'COMPLETED' ? 'Completado' : 'Anulado'"
-                                    [severity]="payment.status === 'COMPLETED' ? 'success' : 'danger'" />
+                                <p-tag [value]="payment.isActive ? 'Activo' : 'Anulado'"
+                                    [severity]="payment.isActive ? 'success' : 'danger'" />
                             </td>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td colspan="7" class="text-center py-5 text-muted-color">
+                            <td colspan="6" class="text-center py-5 text-muted-color">
                                 <i class="pi pi-wallet text-2xl block mb-2"></i>
                                 Sin pagos registrados
                             </td>
                         </tr>
                     </ng-template>
                 </p-table>
+                }
             </p-tabpanel>
 
             <!-- ── TAB 4: Accesos / Retiros ─────────────────────────────── -->
             <p-tabpanel value="3">
+                @if (loadingDeps()) {
+                <p-skeleton height="120px" />
+                } @else {
+                <!-- EarlyDepartureResponse: pickedUpByName / pickedUpByRelationship / authorizedByName -->
                 <p-table [value]="earlyDepartures()" styleClass="p-datatable-sm mt-3"
                     [paginator]="earlyDepartures().length > 8" [rows]="8">
                     <ng-template pTemplate="header">
@@ -248,9 +252,9 @@
                         <tr>
                             <td class="font-medium">{{ dep.studentName }}</td>
                             <td>{{ formatDatetime(dep.departureDatetime) }}</td>
-                            <td>{{ dep.authorizedByStaffName ?? '–' }}</td>
-                            <td>{{ dep.pickupPersonName }}</td>
-                            <td>{{ getRelationshipLabel(dep.pickupPersonRelationship) }}</td>
+                            <td>{{ dep.authorizedByName ?? '–' }}</td>
+                            <td>{{ dep.pickedUpByName ?? '–' }}</td>
+                            <td>{{ getRelationshipLabel(dep.pickedUpByRelationship ?? '') }}</td>
                             <td>{{ dep.reason ?? '–' }}</td>
                         </tr>
                     </ng-template>
@@ -263,6 +267,7 @@
                         </tr>
                     </ng-template>
                 </p-table>
+                }
             </p-tabpanel>
 
         </p-tabpanels>

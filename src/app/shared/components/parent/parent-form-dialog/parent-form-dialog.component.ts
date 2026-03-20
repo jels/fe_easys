@@ -1,7 +1,10 @@
 // src/app/shared/components/parent/parent-form-dialog/parent-form-dialog.component.ts
-import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, signal } from '@angular/core';
+
+import { Component, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
@@ -12,7 +15,14 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { SkeletonModule } from 'primeng/skeleton';
 import { DividerModule } from 'primeng/divider';
 
-import { ParentsService } from '../../../../core/services/conf/parents.service';
+// Services
+import { ParentsService } from '../../../../core/services/api/parents.service';
+import { AuthService } from '../../../../core/services/api/auth.service';
+
+// Models
+import { CreateParentRequest, UpdateParentRequest } from '../../../../core/models/parent.models';
+
+// Enums
 import { DOCUMENT_TYPE_OPTIONS, GENDER_OPTIONS } from '../../../../core/models/enums/person.enum';
 
 @Component({
@@ -22,7 +32,7 @@ import { DOCUMENT_TYPE_OPTIONS, GENDER_OPTIONS } from '../../../../core/models/e
     templateUrl: './parent-form-dialog.component.html',
     styleUrl: './parent-form-dialog.component.scss'
 })
-export class ParentFormDialogComponent implements OnChanges {
+export class ParentFormDialogComponent implements OnChanges, OnDestroy {
     @Input() parentId: number | null = null;
     @Input() visible = false;
 
@@ -34,12 +44,15 @@ export class ParentFormDialogComponent implements OnChanges {
     loading = signal(false);
     loadingData = signal(false);
 
-    documentTypeOptions = DOCUMENT_TYPE_OPTIONS;
-    genderOptions = GENDER_OPTIONS;
+    readonly documentTypeOptions = DOCUMENT_TYPE_OPTIONS;
+    readonly genderOptions = GENDER_OPTIONS;
+
+    private destroy$ = new Subject<void>();
 
     constructor(
         private fb: FormBuilder,
-        private parentsService: ParentsService
+        private parentsService: ParentsService,
+        private authService: AuthService
     ) {
         this.buildForm();
     }
@@ -50,6 +63,13 @@ export class ParentFormDialogComponent implements OnChanges {
         }
     }
 
+    ngOnDestroy(): void {
+        this.destroy$.next();
+        this.destroy$.complete();
+    }
+
+    // ── Inicialización ────────────────────────────────────────────────────────
+
     private onDialogOpen(): void {
         if (this.parentId) {
             this.isEditMode.set(true);
@@ -57,7 +77,10 @@ export class ParentFormDialogComponent implements OnChanges {
         } else {
             this.isEditMode.set(false);
             this.form.reset();
-            this.form.patchValue({ person: { documentType: 'CI' }, isFinancialResponsible: false });
+            this.form.patchValue({
+                person: { documentType: 'CI' },
+                isFinancialResponsible: false
+            });
             this.loadingData.set(false);
         }
     }
@@ -86,34 +109,40 @@ export class ParentFormDialogComponent implements OnChanges {
 
     private loadParent(id: number): void {
         this.loadingData.set(true);
-        this.parentsService.getById(id).subscribe({
-            next: (parent) => {
-                if (parent) {
-                    this.form.patchValue({
-                        occupation: parent.occupation,
-                        workplace: parent.workplace,
-                        workPhone: parent.workPhone,
-                        isFinancialResponsible: parent.isFinancialResponsible,
-                        person: {
-                            firstName: parent.person.firstName,
-                            lastName: parent.person.lastName,
-                            documentType: parent.person.documentType,
-                            documentNumber: parent.person.documentNumber,
-                            birthDate: parent.person.birthDate ? new Date(parent.person.birthDate) : null,
-                            gender: parent.person.gender,
-                            mobilePhone: parent.person.mobilePhone,
-                            phone: parent.person.phone,
-                            email: parent.person.email,
-                            city: parent.person.city,
-                            address: parent.person.address
-                        }
-                    });
-                }
-                this.loadingData.set(false);
-            },
-            error: () => this.loadingData.set(false)
-        });
+        this.parentsService
+            .getById(id)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: (res) => {
+                    if (res.success && res.data) {
+                        const p = res.data;
+                        this.form.patchValue({
+                            occupation: p.occupation,
+                            workplace: p.workplace,
+                            workPhone: p.workPhone,
+                            isFinancialResponsible: p.isFinancialResponsible,
+                            person: {
+                                firstName: p.person.firstName,
+                                lastName: p.person.lastName,
+                                documentType: p.person.documentType,
+                                documentNumber: p.person.documentNumber,
+                                birthDate: p.person.birthDate ? new Date(p.person.birthDate) : null,
+                                gender: p.person.gender,
+                                mobilePhone: p.person.mobilePhone,
+                                phone: p.person.phone,
+                                email: p.person.email,
+                                city: p.person.city,
+                                address: p.person.address
+                            }
+                        });
+                    }
+                    this.loadingData.set(false);
+                },
+                error: () => this.loadingData.set(false)
+            });
     }
+
+    // ── Submit ────────────────────────────────────────────────────────────────
 
     onSubmit(): void {
         if (this.form.invalid) {
@@ -121,11 +150,81 @@ export class ParentFormDialogComponent implements OnChanges {
             return;
         }
         this.loading.set(true);
-        setTimeout(() => {
-            this.loading.set(false);
-            this.onSave.emit();
-        }, 600);
+        this.isEditMode() ? this.update() : this.create();
     }
+
+    private create(): void {
+        const idCompany = this.authService.idCompany;
+        if (!idCompany) return;
+
+        const v = this.form.value;
+        const request: CreateParentRequest = {
+            idCompany,
+            occupation: v.occupation || undefined,
+            workplace: v.workplace || undefined,
+            workPhone: v.workPhone || undefined,
+            isFinancialResponsible: v.isFinancialResponsible ?? false,
+            personData: {
+                idCompany,
+                firstName: v.person.firstName,
+                lastName: v.person.lastName,
+                documentType: v.person.documentType,
+                documentNumber: v.person.documentNumber,
+                birthDate: v.person.birthDate ? this.toIsoDate(v.person.birthDate) : undefined,
+                gender: v.person.gender || undefined,
+                mobilePhone: v.person.mobilePhone || undefined,
+                phone: v.person.phone || undefined,
+                email: v.person.email || undefined,
+                city: v.person.city || undefined,
+                address: v.person.address || undefined
+            }
+        };
+
+        this.parentsService
+            .create(request)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: (res) => {
+                    this.loading.set(false);
+                    if (res.success) this.onSave.emit();
+                },
+                error: () => this.loading.set(false)
+            });
+    }
+
+    private update(): void {
+        const v = this.form.value;
+        const request: UpdateParentRequest = {
+            firstName: v.person.firstName,
+            lastName: v.person.lastName,
+            documentType: v.person.documentType,
+            documentNumber: v.person.documentNumber,
+            birthDate: v.person.birthDate ? this.toIsoDate(v.person.birthDate) : undefined,
+            gender: v.person.gender || undefined,
+            mobilePhone: v.person.mobilePhone || undefined,
+            phone: v.person.phone || undefined,
+            email: v.person.email || undefined,
+            city: v.person.city || undefined,
+            address: v.person.address || undefined,
+            occupation: v.occupation || undefined,
+            workplace: v.workplace || undefined,
+            workPhone: v.workPhone || undefined,
+            isFinancialResponsible: v.isFinancialResponsible ?? false
+        };
+
+        this.parentsService
+            .update(this.parentId!, request)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+                next: (res) => {
+                    this.loading.set(false);
+                    if (res.success) this.onSave.emit();
+                },
+                error: () => this.loading.set(false)
+            });
+    }
+
+    // ── UI helpers ────────────────────────────────────────────────────────────
 
     close(): void {
         this.form.reset();
@@ -139,5 +238,11 @@ export class ParentFormDialogComponent implements OnChanges {
 
     get dialogTitle(): string {
         return this.isEditMode() ? 'Editar Tutor' : 'Nuevo Tutor';
+    }
+
+    private toIsoDate(date: Date | string): string {
+        if (!date) return '';
+        const d = date instanceof Date ? date : new Date(date);
+        return d.toISOString().split('T')[0];
     }
 }

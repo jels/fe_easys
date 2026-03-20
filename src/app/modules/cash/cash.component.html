@@ -1,0 +1,425 @@
+<!-- src/app/modules/cash/cash.component.html -->
+<div class="cash-page">
+
+    <!-- ── Page Header ────────────────────────────────────────────────────── -->
+    <div class="page-header">
+        <div class="page-header-content">
+            <div class="page-title-section">
+                <h1 class="page-title"><i class="pi pi-book"></i> Libro Caja</h1>
+                <p class="page-subtitle">Registro de ingresos y egresos diarios</p>
+            </div>
+            <div class="header-actions">
+                <button pButton icon="pi pi-arrow-down-left" label="Registrar Ingreso" severity="success"
+                    (click)="openCreate('INCOME')"></button>
+                <button pButton icon="pi pi-arrow-up-right" label="Registrar Egreso" severity="danger" [outlined]="true"
+                    (click)="openCreate('EXPENSE')"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Stats del día ──────────────────────────────────────────────────── -->
+    @if (loadingStats()) {
+    <div class="stats-grid">
+        @for (i of [1,2,3,4]; track i) { <p-skeleton height="88px" borderRadius="0.75rem" /> }
+    </div>
+    } @else {
+    <div class="stats-grid">
+        <div class="stat-card stat-income">
+            <div class="stat-icon-wrap"><i class="pi pi-arrow-down-left"></i></div>
+            <div class="stat-body">
+                <span class="stat-num">{{ formatCurrency(stats()?.todayIncome) }}</span>
+                <span class="stat-lbl">Ingresos hoy</span>
+                <span class="stat-sub">{{ stats()?.todayMovements ?? 0 }} movimientos</span>
+            </div>
+        </div>
+        <div class="stat-card stat-expense">
+            <div class="stat-icon-wrap"><i class="pi pi-arrow-up-right"></i></div>
+            <div class="stat-body">
+                <span class="stat-num">{{ formatCurrency(stats()?.todayExpense) }}</span>
+                <span class="stat-lbl">Egresos hoy</span>
+            </div>
+        </div>
+        <div class="stat-card" [class.stat-positive]="(stats()?.todayBalance ?? 0) >= 0"
+            [class.stat-negative]="(stats()?.todayBalance ?? 0) < 0">
+            <div class="stat-icon-wrap"><i class="pi pi-wallet"></i></div>
+            <div class="stat-body">
+                <span class="stat-num">{{ formatCurrency(stats()?.todayBalance) }}</span>
+                <span class="stat-lbl">Saldo hoy</span>
+            </div>
+        </div>
+        <div class="stat-card stat-month">
+            <div class="stat-icon-wrap"><i class="pi pi-calendar"></i></div>
+            <div class="stat-body">
+                <span class="stat-num">{{ formatCurrency(stats()?.monthBalance) }}</span>
+                <span class="stat-lbl">Saldo del mes</span>
+                <span class="stat-sub">
+                    ↑ {{ formatCurrency(stats()?.monthIncome) }} ·
+                    ↓ {{ formatCurrency(stats()?.monthExpense) }}
+                </span>
+            </div>
+        </div>
+    </div>
+    }
+
+    <!-- ── Barra de fecha + filtros ───────────────────────────────────────── -->
+    <div class="filter-bar">
+
+        <!-- Navegación de fecha -->
+        <div class="date-nav">
+            <button pButton icon="pi pi-chevron-left" severity="secondary" [text]="true" pTooltip="Día anterior"
+                (click)="prevDay()"></button>
+            <p-datepicker [(ngModel)]="filterDate" dateFormat="dd/mm/yy" [showIcon]="true" (onSelect)="onDateChange()"
+                styleClass="date-picker-input" />
+            <button pButton icon="pi pi-chevron-right" severity="secondary" [text]="true" pTooltip="Día siguiente"
+                (click)="nextDay()"></button>
+            @if (!isToday) {
+            <button pButton label="Hoy" severity="secondary" [outlined]="true" size="small"
+                (click)="goToday()"></button>
+            }
+        </div>
+
+        <p-divider layout="vertical" />
+
+        <!-- Filtros -->
+        <p-select [options]="typeOptions" [(ngModel)]="filterType" optionLabel="label" optionValue="value"
+            placeholder="Tipo" (onChange)="onTypeFilter()" styleClass="filter-sel" />
+
+        <p-select [options]="conceptOptions" [(ngModel)]="filterConcept" optionLabel="label" optionValue="value"
+            placeholder="Concepto" (onChange)="onConceptFilter()" styleClass="filter-sel" />
+
+        @if (hasFilters) {
+        <button pButton icon="pi pi-times" severity="secondary" [text]="true" pTooltip="Limpiar filtros"
+            (click)="clearFilters()"></button>
+        }
+    </div>
+
+    <!-- ── Resumen del día filtrado ────────────────────────────────────────── -->
+    <div class="day-summary-bar">
+        <div class="day-summary-item income">
+            <span class="dsi-label"><i class="pi pi-arrow-down-left"></i> Ingresos</span>
+            <span class="dsi-value">{{ formatCurrency(totalIncome) }}</span>
+        </div>
+        <div class="day-summary-item expense">
+            <span class="dsi-label"><i class="pi pi-arrow-up-right"></i> Egresos</span>
+            <span class="dsi-value">{{ formatCurrency(totalExpense) }}</span>
+        </div>
+        <div class="day-summary-sep"></div>
+        <div class="day-summary-item" [class.balance-pos]="balance >= 0" [class.balance-neg]="balance < 0">
+            <span class="dsi-label"><i class="pi pi-wallet"></i> Balance del período</span>
+            <span class="dsi-value bold">{{ formatCurrency(balance) }}</span>
+        </div>
+        <div class="day-summary-count">
+            {{ movements().length }} movimiento{{ movements().length !== 1 ? 's' : '' }}
+        </div>
+    </div>
+
+    <!-- ── Tabla de movimientos ────────────────────────────────────────────── -->
+    <div class="table-card">
+        @if (loadingMovements()) {
+        <div class="flex flex-col gap-2 p-3">
+            @for (i of [1,2,3,4,5]; track i) { <p-skeleton height="3rem" /> }
+        </div>
+        } @else {
+        <p-table [value]="movements()" styleClass="p-datatable-sm cash-table" responsiveLayout="scroll"
+            [rowHover]="true">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th style="width:110px">Tipo</th>
+                    <th>Concepto</th>
+                    <th>Beneficiario / Origen</th>
+                    <th>Método</th>
+                    <th>Referencia</th>
+                    <th class="text-right" style="width:150px">Monto</th>
+                    <th class="text-center" style="width:120px">Acciones</th>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-m>
+                <tr [class.row-cancelled]="!m.isActive">
+                    <!-- Tipo -->
+                    <td>
+                        <p-tag [value]="getTypeLabel(m.movementType)" [severity]="getTypeSeverity(m.movementType)" />
+                    </td>
+                    <!-- Concepto -->
+                    <td>
+                        <div class="concept-cell">
+                            <span class="concept-name">{{ m.conceptName }}</span>
+                            <div class="concept-meta">
+                                <span class="concept-cat">{{ getCategoryLabel(m.conceptCategory) }}</span>
+                                @if (m.idPayment) {
+                                <span class="auto-badge"
+                                    pTooltip="Generado automáticamente desde cobro #{{ m.idPayment }}">
+                                    <i class="pi pi-link"></i> AUTO
+                                </span>
+                                }
+                            </div>
+                        </div>
+                    </td>
+                    <!-- Beneficiario -->
+                    <td>
+                        @if (m.beneficiaryName) {
+                        <span class="beneficiary">{{ m.beneficiaryName }}</span>
+                        } @else {
+                        <span class="text-muted">–</span>
+                        }
+                    </td>
+                    <!-- Método -->
+                    <td>
+                        <span class="method-chip">
+                            <i class="pi" [ngClass]="{
+                                'pi-wallet':                  m.paymentMethod === 'CASH',
+                                'pi-arrow-right-arrow-left':  m.paymentMethod === 'TRANSFER',
+                                'pi-credit-card':             m.paymentMethod === 'CARD',
+                                'pi-file':                    m.paymentMethod === 'CHECK'
+                            }"></i>
+                            {{ getMethodLabel(m.paymentMethod ?? '') }}
+                        </span>
+                    </td>
+                    <!-- Referencia -->
+                    <td>
+                        <span class="mono text-sm">{{ m.referenceNumber ?? '–' }}</span>
+                    </td>
+                    <!-- Monto -->
+                    <td class="text-right">
+                        <span class="amount" [class.amount-income]="m.movementType === 'INCOME'"
+                            [class.amount-expense]="m.movementType === 'EXPENSE'">
+                            {{ m.movementType === 'INCOME' ? '+' : '-' }}{{ formatCurrency(m.amount) }}
+                        </span>
+                        @if (!m.isActive) {
+                        <span class="cancelled-label">ANULADO</span>
+                        }
+                    </td>
+                    <!-- Acciones -->
+                    <td class="text-center">
+                        @if (m.isActive) {
+                        <div class="action-buttons">
+                            <button pButton icon="pi pi-eye" severity="secondary" [text]="true" pTooltip="Ver detalle"
+                                (click)="openDetail(m)"></button>
+                            <button pButton icon="pi pi-pencil" severity="warn" [text]="true" pTooltip="Editar"
+                                (click)="openEdit(m)"></button>
+                            <button pButton icon="pi pi-ban" severity="danger" [text]="true" pTooltip="Anular"
+                                (click)="confirmCancel(m)"></button>
+                        </div>
+                        }
+                    </td>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="7">
+                        <div class="empty-state">
+                            <i class="pi pi-book"></i>
+                            <p>Sin movimientos para este período</p>
+                            <div class="empty-actions">
+                                <button pButton icon="pi pi-arrow-down-left" label="Registrar Ingreso"
+                                    severity="success" size="small" (click)="openCreate('INCOME')"></button>
+                                <button pButton icon="pi pi-arrow-up-right" label="Registrar Egreso" severity="danger"
+                                    [outlined]="true" size="small" (click)="openCreate('EXPENSE')"></button>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+        }
+    </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- MODAL: REGISTRAR / EDITAR MOVIMIENTO                                      -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<p-dialog [header]="isEditMode() ? 'Editar Movimiento' : 'Registrar Movimiento'" [(visible)]="showForm" [modal]="true"
+    [draggable]="false" [style]="{ width: '560px', maxWidth: '95vw' }" [closeOnEscape]="true"
+    (onHide)="showForm.set(false)">
+
+    <ng-template pTemplate="header">
+        <div class="dialog-header">
+            <div class="dialog-icon" [class.dialog-icon-income]="movementForm.get('movementType')?.value === 'INCOME'"
+                [class.dialog-icon-expense]="movementForm.get('movementType')?.value === 'EXPENSE'">
+                <i [class]="movementForm.get('movementType')?.value === 'INCOME'
+                    ? 'pi pi-arrow-down-left' : 'pi pi-arrow-up-right'"></i>
+            </div>
+            <div>
+                <h3 class="dialog-title">{{ isEditMode() ? 'Editar Movimiento' : 'Registrar Movimiento' }}</h3>
+                <p class="dialog-subtitle">Complete los datos del movimiento de caja</p>
+            </div>
+        </div>
+    </ng-template>
+
+    <form [formGroup]="movementForm" class="form-body">
+
+        <!-- Tipo de movimiento -->
+        <div class="field">
+            <label>Tipo <span class="req">*</span></label>
+            <div class="type-toggle">
+                <button type="button" class="type-btn"
+                    [class.type-btn-income]="movementForm.get('movementType')?.value === 'INCOME'"
+                    (click)="movementForm.patchValue({ movementType: 'INCOME', idCashConcept: null })">
+                    <i class="pi pi-arrow-down-left"></i> Ingreso
+                </button>
+                <button type="button" class="type-btn"
+                    [class.type-btn-expense]="movementForm.get('movementType')?.value === 'EXPENSE'"
+                    (click)="movementForm.patchValue({ movementType: 'EXPENSE', idCashConcept: null })">
+                    <i class="pi pi-arrow-up-right"></i> Egreso
+                </button>
+            </div>
+        </div>
+
+        <div class="form-grid-2">
+            <!-- Concepto -->
+            <div class="field">
+                <label>Concepto <span class="req">*</span></label>
+                <p-select formControlName="idCashConcept" [options]="conceptsFiltered()" optionLabel="name"
+                    optionValue="idCashConcept" placeholder="Seleccionar concepto" [showClear]="true"
+                    styleClass="w-full" [class.ng-invalid]="isFieldInvalid('idCashConcept')" />
+                @if (isFieldInvalid('idCashConcept')) {
+                <small class="error-msg">Seleccione un concepto</small>
+                }
+            </div>
+
+            <!-- Fecha -->
+            <div class="field">
+                <label>Fecha <span class="req">*</span></label>
+                <p-datepicker formControlName="movementDate" dateFormat="dd/mm/yy" [showIcon]="true"
+                    styleClass="w-full" />
+            </div>
+        </div>
+
+        <div class="form-grid-2">
+            <!-- Monto -->
+            <div class="field">
+                <label>Monto (Gs.) <span class="req">*</span></label>
+                <p-inputNumber formControlName="amount" mode="decimal" [minFractionDigits]="0" [maxFractionDigits]="0"
+                    [min]="1" placeholder="0" styleClass="w-full" [class.ng-invalid]="isFieldInvalid('amount')" />
+                @if (isFieldInvalid('amount')) {
+                <small class="error-msg">El monto es requerido</small>
+                }
+            </div>
+
+            <!-- Método de pago -->
+            <div class="field">
+                <label>Método de pago <span class="req">*</span></label>
+                <p-select formControlName="paymentMethod" [options]="paymentMethodOptions" optionLabel="label"
+                    optionValue="value" styleClass="w-full" />
+            </div>
+        </div>
+
+        <!-- Beneficiario -->
+        <div class="field">
+            <label>{{ movementForm.get('movementType')?.value === 'INCOME' ? 'Recibido de' : 'Pagado a' }}</label>
+            <input pInputText formControlName="beneficiaryName" placeholder="Nombre de la persona o empresa" />
+        </div>
+
+        <div class="form-grid-2">
+            <!-- Nro. Referencia -->
+            <div class="field">
+                <label>Nro. Comprobante</label>
+                <input pInputText formControlName="referenceNumber" placeholder="Opcional" />
+            </div>
+
+            <!-- Descripción corta -->
+            <div class="field">
+                <label>Descripción</label>
+                <input pInputText formControlName="description" placeholder="Detalle breve" />
+            </div>
+        </div>
+
+        <!-- Notas -->
+        <div class="field">
+            <label>Notas internas</label>
+            <textarea pTextarea formControlName="notes" rows="2" placeholder="Observaciones adicionales..."
+                class="w-full resize-none"></textarea>
+        </div>
+
+    </form>
+
+    <ng-template pTemplate="footer">
+        <div class="dialog-footer">
+            <p-button label="Cancelar" icon="pi pi-times" severity="secondary" [text]="true"
+                (onClick)="showForm.set(false)" />
+            <p-button
+                [label]="isEditMode() ? 'Actualizar' : (movementForm.get('movementType')?.value === 'INCOME' ? 'Registrar Ingreso' : 'Registrar Egreso')"
+                [icon]="movementForm.get('movementType')?.value === 'INCOME' ? 'pi pi-arrow-down-left' : 'pi pi-arrow-up-right'"
+                [severity]="movementForm.get('movementType')?.value === 'INCOME' ? 'success' : 'danger'"
+                [loading]="savingMovement()" (onClick)="submitForm()" />
+        </div>
+    </ng-template>
+</p-dialog>
+
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- MODAL: DETALLE DEL MOVIMIENTO                                             -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<p-dialog header="Detalle del Movimiento" [(visible)]="showDetail" [modal]="true" [draggable]="false"
+    [style]="{ width: '480px' }">
+    @if (selectedMovement(); as m) {
+    <div class="detail-content">
+        <div class="detail-type-banner" [class.banner-income]="m.movementType === 'INCOME'"
+            [class.banner-expense]="m.movementType === 'EXPENSE'">
+            <i [class]="m.movementType === 'INCOME' ? 'pi pi-arrow-down-left' : 'pi pi-arrow-up-right'"></i>
+            <span class="detail-amount">{{ formatCurrency(m.amount) }}</span>
+            <p-tag [value]="getTypeLabel(m.movementType)" [severity]="getTypeSeverity(m.movementType)" />
+        </div>
+        <div class="detail-grid">
+            <div class="detail-item">
+                <span class="di-label">Concepto</span>
+                <span class="di-value">{{ m.conceptName }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="di-label">Categoría</span>
+                <span class="di-value">{{ getCategoryLabel(m.conceptCategory) }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="di-label">Fecha</span>
+                <span class="di-value mono">{{ m.movementDate }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="di-label">Método</span>
+                <span class="di-value">{{ getMethodLabel(m.paymentMethod ?? '') }}</span>
+            </div>
+            @if (m.beneficiaryName) {
+            <div class="detail-item span-2">
+                <span class="di-label">{{ m.movementType === 'INCOME' ? 'Recibido de' : 'Pagado a' }}</span>
+                <span class="di-value">{{ m.beneficiaryName }}</span>
+            </div>
+            }
+            @if (m.referenceNumber) {
+            <div class="detail-item">
+                <span class="di-label">Comprobante</span>
+                <span class="di-value mono">{{ m.referenceNumber }}</span>
+            </div>
+            }
+            @if (m.description) {
+            <div class="detail-item span-2">
+                <span class="di-label">Descripción</span>
+                <span class="di-value">{{ m.description }}</span>
+            </div>
+            }
+            @if (m.notes) {
+            <div class="detail-item span-2">
+                <span class="di-label">Notas</span>
+                <span class="di-value">{{ m.notes }}</span>
+            </div>
+            }
+            @if (m.idPayment) {
+            <div class="detail-item">
+                <span class="di-label">Pago vinculado</span>
+                <span class="di-value mono">#{{ m.idPayment }}</span>
+            </div>
+            }
+        </div>
+    </div>
+    }
+    <ng-template pTemplate="footer">
+        <p-button label="Cerrar" severity="secondary" [outlined]="true" (onClick)="showDetail = false" />
+        @if (selectedMovement()?.isActive) {
+        <p-button label="Editar" icon="pi pi-pencil" severity="warn"
+            (onClick)="openEdit(selectedMovement()!); showDetail = false" />
+        }
+    </ng-template>
+</p-dialog>
+
+<p-confirmDialog />
+<p-toast position="top-right" />

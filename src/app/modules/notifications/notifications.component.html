@@ -7,8 +7,8 @@
             <div>
                 <h1 class="page-title">
                     <i class="pi pi-bell"></i> Notificaciones
-                    @if (stats()?.unread > 0) {
-                    <span class="unread-badge">{{ stats().unread }}</span>
+                    @if ((stats()?.unread ?? 0) > 0) {
+                    <span class="unread-badge">{{ stats()!.unread }}</span>
                     }
                 </h1>
                 <p class="page-subtitle">Centro de notificaciones y comunicados institucionales</p>
@@ -28,22 +28,22 @@
     <div class="stats-row">
         <div class="stat-chip">
             <i class="pi pi-inbox"></i>
-            <span class="sc-num">{{ stats().total }}</span>
+            <span class="sc-num">{{ stats()!.total }}</span>
             <span class="sc-lbl">Total</span>
         </div>
         <div class="stat-chip stat-chip-warn">
             <i class="pi pi-envelope"></i>
-            <span class="sc-num">{{ stats().unread }}</span>
+            <span class="sc-num">{{ stats()!.unread }}</span>
             <span class="sc-lbl">No leídas</span>
         </div>
         <div class="stat-chip stat-chip-danger">
             <i class="pi pi-exclamation-circle"></i>
-            <span class="sc-num">{{ stats().critical }}</span>
+            <span class="sc-num">{{ stats()!.critical }}</span>
             <span class="sc-lbl">Críticas</span>
         </div>
         <div class="stat-chip stat-chip-info">
             <i class="pi pi-send"></i>
-            <span class="sc-num">{{ stats().unsent }}</span>
+            <span class="sc-num">{{ stats()!.unsent }}</span>
             <span class="sc-lbl">Sin enviar</span>
         </div>
     </div>
@@ -65,8 +65,8 @@
                     <span class="type-item-name">Todas</span>
                     <span class="type-item-count">{{ stats()?.total ?? 0 }} notificaciones</span>
                 </div>
-                @if (stats()?.unread > 0) {
-                <span class="type-unread-dot">{{ stats().unread }}</span>
+                @if ((stats()?.unread ?? 0) > 0) {
+                <span class="type-unread-dot">{{ stats()!.unread }}</span>
                 }
             </button>
 
@@ -79,7 +79,7 @@
                 <div class="type-item-info">
                     <span class="type-item-name">{{ type.name }}</span>
                     <span class="type-item-count">
-                        {{ stats()?.byType | typeCount: type.idNotificationType }} notificaciones
+                        {{ (stats()?.byType ?? null) | typeCount: type.idNotificationType }} notificaciones
                     </span>
                 </div>
                 @if (getUnreadCount(type.idNotificationType) > 0) {
@@ -121,20 +121,18 @@
             </div>
             } @else {
             <div class="notif-list">
-                @for (notif of notifications(); track notif.idNotification) {
+                <!-- AppNotificationResponse usa idAppNotification (no idNotification) -->
+                @for (notif of notifications(); track notif.idAppNotification) {
                 <div class="notif-item" [class.unread]="!notif.isRead"
                     [class.priority-critical]="notif.priority === 'CRITICAL'" (click)="openDetail(notif)">
 
-                    <!-- Indicador de tipo -->
                     <div class="notif-type-bar" [style.background]="notif.typeColor ?? '#6366f1'"></div>
 
-                    <!-- Ícono -->
                     <div class="notif-icon" [style.background]="(notif.typeColor ?? '#6366f1') + '18'">
                         <i class="pi" [class]="notif.typeIcon ?? 'pi-bell'"
                             [style.color]="notif.typeColor ?? '#6366f1'"></i>
                     </div>
 
-                    <!-- Contenido -->
                     <div class="notif-content">
                         <div class="notif-content-top">
                             <span class="notif-type-label">{{ notif.typeName }}</span>
@@ -144,9 +142,10 @@
                                 @if (!notif.isSent) {
                                 <p-tag value="Borrador" severity="secondary" styleClass="text-xs" />
                                 }
-                                @if (notif.targetName) {
+                                <!-- AppNotificationResponse no tiene targetName — usar idTarget si existe -->
+                                @if (notif.idTarget) {
                                 <span class="notif-target-chip">
-                                    <i class="pi pi-user"></i> {{ notif.targetName }}
+                                    <i class="pi pi-user"></i> {{ getScopeLabel(notif.scope) }}
                                 </span>
                                 }
                             </div>
@@ -154,7 +153,7 @@
                         <span class="notif-title">{{ notif.title }}</span>
                         <span class="notif-body">{{ notif.body }}</span>
                         <div class="notif-meta">
-                            <span><i class="pi pi-user"></i> {{ notif.createdByName }}</span>
+                            <span><i class="pi pi-user"></i> {{ notif.createdByName ?? '–' }}</span>
                             <span><i class="pi pi-clock"></i> {{ notif.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
                             <span class="scope-chip">
                                 <i class="pi pi-globe"></i> {{ getScopeLabel(notif.scope) }}
@@ -162,7 +161,6 @@
                         </div>
                     </div>
 
-                    <!-- Acciones -->
                     <div class="notif-actions" (click)="$event.stopPropagation()">
                         @if (!notif.isRead) {
                         <div class="unread-indicator" pTooltip="No leída"></div>
@@ -189,7 +187,6 @@
     [style]="{ width: '620px' }" (onHide)="selectedNotif.set(null)">
     @if (selectedNotif(); as notif) {
     <div class="detail-content">
-        <!-- Header tipo -->
         <div class="detail-type-header" [style.border-left-color]="notif.typeColor ?? '#6366f1'">
             <div class="detail-type-pill" [style.background]="(notif.typeColor ?? '#6366f1') + '1a'"
                 [style.color]="notif.typeColor ?? '#6366f1'">
@@ -202,13 +199,9 @@
             }
         </div>
 
-        <!-- Título -->
         <h2 class="detail-title">{{ notif.title }}</h2>
-
-        <!-- Cuerpo -->
         <div class="detail-body">{{ notif.body }}</div>
 
-        <!-- Metadata -->
         <div class="detail-meta-grid">
             <div class="detail-meta-item">
                 <i class="pi pi-globe"></i>
@@ -217,20 +210,11 @@
                     <span class="dm-value">{{ getScopeLabel(notif.scope) }}</span>
                 </div>
             </div>
-            @if (notif.targetName) {
-            <div class="detail-meta-item">
-                <i class="pi pi-user"></i>
-                <div>
-                    <span class="dm-label">Destinatario</span>
-                    <span class="dm-value">{{ notif.targetName }}</span>
-                </div>
-            </div>
-            }
             <div class="detail-meta-item">
                 <i class="pi pi-user-edit"></i>
                 <div>
                     <span class="dm-label">Creado por</span>
-                    <span class="dm-value">{{ notif.createdByName }}</span>
+                    <span class="dm-value">{{ notif.createdByName ?? '–' }}</span>
                 </div>
             </div>
             <div class="detail-meta-item">

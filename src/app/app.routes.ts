@@ -66,6 +66,10 @@ export const routes: Routes = [
             {
                 path: 'chats',
                 loadChildren: () => import('./modules/chat/chat.routes').then((r) => r.chatRoutes)
+            },
+            {
+                path: 'cash',
+                loadChildren: () => import('./modules/cash/cash.routes').then((r) => r.cashRoutes)
             }
         ]
     },

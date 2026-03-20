@@ -25,14 +25,15 @@
     </div>
     } @else if (stats(); as s) {
     <div class="stats-grid">
+
         <div class="stat-card clickable" (click)="navigate('/sys/students')">
             <div class="stat-icon-wrap" style="background:rgba(59,130,246,0.1)">
                 <i class="pi pi-users" style="color:#2563eb"></i>
             </div>
             <div class="stat-body">
-                <span class="stat-num">{{ s.students.active }}</span>
+                <span class="stat-num">{{ s.activeStudents }}</span>
                 <span class="stat-lbl">Alumnos activos</span>
-                <span class="stat-sub">+{{ s.students.newThisMonth }} este mes</span>
+                <span class="stat-sub">{{ s.totalStudents }} total</span>
             </div>
         </div>
 
@@ -41,9 +42,9 @@
                 <i class="pi pi-briefcase" style="color:#7c3aed"></i>
             </div>
             <div class="stat-body">
-                <span class="stat-num">{{ s.staff.active }}</span>
+                <span class="stat-num">{{ s.totalStaff }}</span>
                 <span class="stat-lbl">Personal activo</span>
-                <span class="stat-sub">{{ s.sections.total }} secciones</span>
+                <span class="stat-sub">{{ s.totalSections }} secciones</span>
             </div>
         </div>
 
@@ -52,10 +53,11 @@
                 <i class="pi pi-check-circle" style="color:#059669"></i>
             </div>
             <div class="stat-body">
-                <span class="stat-num">{{ s.access.presentToday }}</span>
+                <span class="stat-num">{{ s.presentToday }}</span>
                 <span class="stat-lbl">Presentes hoy</span>
-                <span class="stat-sub stat-warn">{{ s.access.absentToday }} ausentes · {{ s.access.lateToday }}
-                    tarde</span>
+                <span class="stat-sub stat-warn">
+                    {{ s.absentToday }} ausentes · {{ s.lateToday }} tarde
+                </span>
             </div>
         </div>
 
@@ -64,9 +66,11 @@
                 <i class="pi pi-credit-card" style="color:#d97706"></i>
             </div>
             <div class="stat-body">
-                <span class="stat-num">{{ s.payments.pendingCount }}</span>
-                <span class="stat-lbl">Pagos pendientes</span>
-                <span class="stat-sub stat-danger">{{ s.payments.overdueCount }} vencidos</span>
+                <span class="stat-num">{{ s.overdueCount }}</span>
+                <span class="stat-lbl">Cuotas vencidas</span>
+                <span class="stat-sub stat-danger">
+                    {{ s.pendingAmount | number:'1.0-0' }} Gs. pendiente
+                </span>
             </div>
         </div>
 
@@ -75,12 +79,12 @@
                 <i class="pi pi-exclamation-triangle" style="color:#dc2626"></i>
             </div>
             <div class="stat-body">
-                <span class="stat-num">{{ s.infractions.openCount }}</span>
-                <span class="stat-lbl">Infracciones abiertas</span>
-                @if (s.infractions.criticalCount > 0) {
-                <span class="stat-sub stat-danger">{{ s.infractions.criticalCount }} críticas</span>
+                <span class="stat-num">{{ s.criticalInfractions }}</span>
+                <span class="stat-lbl">Infracciones críticas</span>
+                @if (s.criticalInfractions > 0) {
+                <span class="stat-sub stat-danger">Requieren atención</span>
                 } @else {
-                <span class="stat-sub">Sin críticas</span>
+                <span class="stat-sub">Sin infracciones</span>
                 }
             </div>
         </div>
@@ -92,9 +96,10 @@
             <div class="stat-body">
                 <span class="stat-num">{{ upcomingEvents().length }}</span>
                 <span class="stat-lbl">Eventos próximos</span>
-                <span class="stat-sub">Año lectivo 2025</span>
+                <span class="stat-sub">{{ s.activeYear }}</span>
             </div>
         </div>
+
     </div>
     }
 
@@ -143,40 +148,32 @@
                 </div>
                 } @else {
                 <div class="alerts-list">
-                    <!-- Críticas -->
-                    @for (alert of dangerAlerts; track alert.id) {
-                    <div class="alert-item alert-danger" (click)="alert.link && navigate(alert.link)">
-                        <div class="alert-icon"><i class="pi" [class]="alert.icon"></i></div>
+                    <!-- DashboardAlert: { type, icon, title, message } -->
+                    @for (alert of dangerAlerts; track $index) {
+                    <div class="alert-item alert-danger">
+                        <div class="alert-icon"><i [class]="alert.icon"></i></div>
                         <div class="alert-body">
-                            <span class="alert-category">{{ alert.category }}</span>
                             <span class="alert-title">{{ alert.title }}</span>
-                            <span class="alert-detail">{{ alert.detail }}</span>
+                            <span class="alert-detail">{{ alert.message }}</span>
                         </div>
-                        @if (alert.link) { <i class="pi pi-arrow-right alert-arrow"></i> }
                     </div>
                     }
-                    <!-- Advertencias -->
-                    @for (alert of warnAlerts; track alert.id) {
-                    <div class="alert-item alert-warn" (click)="alert.link && navigate(alert.link)">
-                        <div class="alert-icon"><i class="pi" [class]="alert.icon"></i></div>
+                    @for (alert of warnAlerts; track $index) {
+                    <div class="alert-item alert-warn">
+                        <div class="alert-icon"><i [class]="alert.icon"></i></div>
                         <div class="alert-body">
-                            <span class="alert-category">{{ alert.category }}</span>
                             <span class="alert-title">{{ alert.title }}</span>
-                            <span class="alert-detail">{{ alert.detail }}</span>
+                            <span class="alert-detail">{{ alert.message }}</span>
                         </div>
-                        @if (alert.link) { <i class="pi pi-arrow-right alert-arrow"></i> }
                     </div>
                     }
-                    <!-- Informativas -->
-                    @for (alert of infoAlerts; track alert.id) {
-                    <div class="alert-item alert-info" (click)="alert.link && navigate(alert.link)">
-                        <div class="alert-icon"><i class="pi" [class]="alert.icon"></i></div>
+                    @for (alert of infoAlerts; track $index) {
+                    <div class="alert-item alert-info">
+                        <div class="alert-icon"><i [class]="alert.icon"></i></div>
                         <div class="alert-body">
-                            <span class="alert-category">{{ alert.category }}</span>
                             <span class="alert-title">{{ alert.title }}</span>
-                            <span class="alert-detail">{{ alert.detail }}</span>
+                            <span class="alert-detail">{{ alert.message }}</span>
                         </div>
-                        @if (alert.link) { <i class="pi pi-arrow-right alert-arrow"></i> }
                     </div>
                     }
                 </div>
@@ -210,13 +207,17 @@
                     <div class="event-item" (click)="navigate('/sys/events')">
                         <div class="event-date-block">
                             <span class="event-day">{{ ev.eventDate.slice(8,10) }}</span>
-                            <span class="event-month">{{ ev.eventDate.slice(5,7) | slice:0:3 }}</span>
+                            <span class="event-month">{{ ev.eventDate.slice(5,7) }}</span>
                         </div>
                         <div class="event-body">
                             <span class="event-name">{{ ev.name }}</span>
                             <span class="event-meta">
-                                @if (ev.eventTime) { <i class="pi pi-clock"></i> {{ ev.eventTime }} · }
-                                @if (ev.location) { <i class="pi pi-map-marker"></i> {{ ev.location }} }
+                                @if (ev.eventTime) {
+                                <i class="pi pi-clock"></i> {{ ev.eventTime }} ·
+                                }
+                                @if (ev.location) {
+                                <i class="pi pi-map-marker"></i> {{ ev.location }}
+                                }
                             </span>
                         </div>
                         <p-tag [value]="getEventStatusLabel(ev.status)" [severity]="getEventStatusSeverity(ev.status)"
@@ -242,11 +243,12 @@
                     <p>Sin actividad reciente</p>
                 </div>
                 } @else {
+                <!-- RecentActivity: { icon, color, title, detail, time } -->
                 <div class="activity-list">
-                    @for (item of activity(); track item.id) {
+                    @for (item of activity(); track $index) {
                     <div class="activity-item">
                         <div class="activity-icon" [style.background]="item.color + '18'">
-                            <i class="pi" [class]="item.icon" [style.color]="item.color"></i>
+                            <i [class]="item.icon" [style.color]="item.color"></i>
                         </div>
                         <div class="activity-body">
                             <span class="activity-title">{{ item.title }}</span>

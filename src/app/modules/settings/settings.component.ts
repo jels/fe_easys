@@ -1,4 +1,5 @@
 // src/app/modules/settings/settings.component.ts
+
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -22,9 +23,12 @@ import { DividerModule } from 'primeng/divider';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
-import { CompanyMock, BranchMock, SystemParamMock } from '../../shared/data/company.mock';
-import { SchoolYearMock, SchoolPeriodMock } from '../../shared/data/academic.mock';
-import { CreatePeriodRequest, CreateSchoolYearRequest, SettingsService, UpdateCompanyRequest, UpsertBranchRequest } from '../../core/services/conf/settings.service';
+// Services
+import { SettingsService, UpdateCompanyRequest, UpsertBranchRequest, CreateSchoolYearRequest, CreatePeriodRequest } from '../../core/services/api/settings.service';
+import { AuthService } from '../../core/services/api/auth.service';
+
+// Models
+import { CompanyResponse, BranchResponse, SchoolYearResponse, SchoolPeriodResponse, SystemParamResponse, SettingsStatsResponse } from '../../core/models/settings.models';
 
 @Component({
     selector: 'app-settings',
@@ -58,27 +62,27 @@ export class SettingsComponent implements OnInit, OnDestroy {
     activeTab = signal('0');
 
     // ── Stats ─────────────────────────────────────────────────────────────────
-    stats = signal<any>(null);
+    stats = signal<SettingsStatsResponse | null>(null);
 
     // ── Tab 0: Empresa ────────────────────────────────────────────────────────
-    company = signal<CompanyMock | null>(null);
+    company = signal<CompanyResponse | null>(null);
     loadingCompany = signal(false);
     savingCompany = signal(false);
     editingCompany = signal(false);
     companyForm!: FormGroup;
 
     // ── Tab 1: Sucursales ─────────────────────────────────────────────────────
-    branches = signal<BranchMock[]>([]);
+    branches = signal<BranchResponse[]>([]);
     loadingBranches = signal(false);
     showBranchForm = signal(false);
     savingBranch = signal(false);
-    editingBranch = signal<BranchMock | null>(null);
+    editingBranch = signal<BranchResponse | null>(null);
     branchForm!: FormGroup;
 
     // ── Tab 2: Año lectivo ────────────────────────────────────────────────────
-    schoolYears = signal<SchoolYearMock[]>([]);
-    periods = signal<SchoolPeriodMock[]>([]);
-    selectedYear = signal<SchoolYearMock | null>(null);
+    schoolYears = signal<SchoolYearResponse[]>([]);
+    periods = signal<SchoolPeriodResponse[]>([]);
+    selectedYear = signal<SchoolYearResponse | null>(null);
     loadingYears = signal(false);
     loadingPeriods = signal(false);
     showYearForm = signal(false);
@@ -89,7 +93,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     periodForm!: FormGroup;
 
     // ── Tab 3: Parámetros ─────────────────────────────────────────────────────
-    params = signal<SystemParamMock[]>([]);
+    params = signal<SystemParamResponse[]>([]);
     loadingParams = signal(false);
     activeParamCategory = signal('GENERAL');
     editingParamId = signal<number | null>(null);
@@ -107,6 +111,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
     constructor(
         private settingsService: SettingsService,
+        private authService: AuthService,
         private fb: FormBuilder,
         private messageService: MessageService,
         private confirmationService: ConfirmationService
@@ -117,35 +122,49 @@ export class SettingsComponent implements OnInit, OnDestroy {
     ngOnInit(): void {
         this.loadAll();
     }
-
     ngOnDestroy(): void {
         this.destroy$.next();
         this.destroy$.complete();
     }
 
+    private get idCompany(): number | null {
+        return this.authService.idCompany;
+    }
+
     // ── Carga inicial ─────────────────────────────────────────────────────────
 
     loadAll(): void {
+        const id = this.idCompany;
+        if (!id) return;
         this.loadCompany();
         this.loadBranches();
         this.loadYears();
         this.loadParams();
         this.settingsService
-            .getSettingsStats()
+            .getSettingsStats(id)
             .pipe(takeUntil(this.destroy$))
-            .subscribe((s) => this.stats.set(s));
+            .subscribe({
+                next: (res) => {
+                    if (res.success) this.stats.set(res.data ?? null);
+                }
+            });
     }
 
     // ── Tab 0: Empresa ────────────────────────────────────────────────────────
 
     loadCompany(): void {
+        const id = this.idCompany;
+        if (!id) return;
         this.loadingCompany.set(true);
         this.settingsService
-            .getCompany()
+            .getCompany(id)
             .pipe(takeUntil(this.destroy$))
-            .subscribe((c) => {
-                this.company.set(c);
-                this.loadingCompany.set(false);
+            .subscribe({
+                next: (res) => {
+                    if (res.success) this.company.set(res.data ?? null);
+                    this.loadingCompany.set(false);
+                },
+                error: () => this.loadingCompany.set(false)
             });
     }
 
@@ -154,7 +173,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
         if (!c) return;
         this.companyForm.patchValue({
             name: c.name,
-            tradeName: c.tradeName,
+            legalName: c.legalName, // era tradeName en el mock
             ruc: c.ruc,
             address: c.address,
             phone: c.phone,
@@ -172,18 +191,21 @@ export class SettingsComponent implements OnInit, OnDestroy {
             this.companyForm.markAllAsTouched();
             return;
         }
+        const id = this.idCompany;
+        if (!id) return;
         this.savingCompany.set(true);
         const req: UpdateCompanyRequest = this.companyForm.value;
         this.settingsService
-            .updateCompany(req)
+            .updateCompany(id, req)
             .pipe(takeUntil(this.destroy$))
             .subscribe({
-                next: (c) => {
-                    this.company.set(c);
-                    this.editingCompany.set(false);
+                next: (res) => {
+                    if (res.success && res.data) {
+                        this.company.set(res.data);
+                        this.editingCompany.set(false);
+                        this.messageService.add({ severity: 'success', summary: 'Datos actualizados', detail: res.data.name });
+                    }
                     this.savingCompany.set(false);
-                    this.loadAll();
-                    this.messageService.add({ severity: 'success', summary: 'Datos actualizados', detail: c.name });
                 },
                 error: () => this.savingCompany.set(false)
             });
@@ -192,13 +214,18 @@ export class SettingsComponent implements OnInit, OnDestroy {
     // ── Tab 1: Sucursales ─────────────────────────────────────────────────────
 
     loadBranches(): void {
+        const id = this.idCompany;
+        if (!id) return;
         this.loadingBranches.set(true);
         this.settingsService
-            .getBranches()
+            .getBranches(id)
             .pipe(takeUntil(this.destroy$))
-            .subscribe((b) => {
-                this.branches.set(b);
-                this.loadingBranches.set(false);
+            .subscribe({
+                next: (res) => {
+                    if (res.success) this.branches.set(res.data ?? []);
+                    this.loadingBranches.set(false);
+                },
+                error: () => this.loadingBranches.set(false)
             });
     }
 
@@ -208,7 +235,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
         this.showBranchForm.set(true);
     }
 
-    openEditBranch(branch: BranchMock): void {
+    openEditBranch(branch: BranchResponse): void {
         this.editingBranch.set(branch);
         this.branchForm.patchValue({
             name: branch.name,
@@ -225,30 +252,35 @@ export class SettingsComponent implements OnInit, OnDestroy {
             this.branchForm.markAllAsTouched();
             return;
         }
+        const id = this.idCompany;
+        if (!id) return;
         this.savingBranch.set(true);
         const req: UpsertBranchRequest = {
             ...this.branchForm.value,
+            idCompany: id,
             idBranch: this.editingBranch()?.idBranch
         };
         this.settingsService
             .saveBranch(req)
             .pipe(takeUntil(this.destroy$))
             .subscribe({
-                next: () => {
+                next: (res) => {
                     this.savingBranch.set(false);
-                    this.showBranchForm.set(false);
-                    this.loadBranches();
-                    this.loadAll();
-                    this.messageService.add({
-                        severity: 'success',
-                        summary: this.editingBranch() ? 'Sucursal actualizada' : 'Sucursal creada'
-                    });
+                    if (res.success) {
+                        this.showBranchForm.set(false);
+                        this.loadBranches();
+                        this.loadAll();
+                        this.messageService.add({
+                            severity: 'success',
+                            summary: this.editingBranch() ? 'Sucursal actualizada' : 'Sucursal creada'
+                        });
+                    }
                 },
                 error: () => this.savingBranch.set(false)
             });
     }
 
-    confirmDeleteBranch(branch: BranchMock): void {
+    confirmDeleteBranch(branch: BranchResponse): void {
         if (branch.isMain) {
             this.messageService.add({ severity: 'warn', summary: 'No permitido', detail: 'No se puede eliminar la sede principal' });
             return;
@@ -261,10 +293,12 @@ export class SettingsComponent implements OnInit, OnDestroy {
                 this.settingsService
                     .deleteBranch(branch.idBranch)
                     .pipe(takeUntil(this.destroy$))
-                    .subscribe(() => {
-                        this.loadBranches();
-                        this.loadAll();
-                        this.messageService.add({ severity: 'success', summary: 'Sucursal eliminada' });
+                    .subscribe({
+                        next: () => {
+                            this.loadBranches();
+                            this.loadAll();
+                            this.messageService.add({ severity: 'success', summary: 'Sucursal eliminada' });
+                        }
                     });
             }
         });
@@ -273,17 +307,22 @@ export class SettingsComponent implements OnInit, OnDestroy {
     // ── Tab 2: Año lectivo ────────────────────────────────────────────────────
 
     loadYears(): void {
+        const id = this.idCompany;
+        if (!id) return;
         this.loadingYears.set(true);
         this.settingsService
-            .getSchoolYears()
+            .getSchoolYears(id)
             .pipe(takeUntil(this.destroy$))
-            .subscribe((y) => {
-                this.schoolYears.set(y);
-                this.loadingYears.set(false);
+            .subscribe({
+                next: (res) => {
+                    if (res.success) this.schoolYears.set(res.data ?? []);
+                    this.loadingYears.set(false);
+                },
+                error: () => this.loadingYears.set(false)
             });
     }
 
-    selectYear(year: SchoolYearMock): void {
+    selectYear(year: SchoolYearResponse): void {
         this.selectedYear.set(year);
         this.loadPeriods(year.idSchoolYear);
     }
@@ -293,13 +332,16 @@ export class SettingsComponent implements OnInit, OnDestroy {
         this.settingsService
             .getPeriodsByYear(idSchoolYear)
             .pipe(takeUntil(this.destroy$))
-            .subscribe((p) => {
-                this.periods.set(p);
-                this.loadingPeriods.set(false);
+            .subscribe({
+                next: (res) => {
+                    if (res.success) this.periods.set(res.data ?? []);
+                    this.loadingPeriods.set(false);
+                },
+                error: () => this.loadingPeriods.set(false)
             });
     }
 
-    toggleYear(year: SchoolYearMock): void {
+    toggleYear(year: SchoolYearResponse): void {
         const newState = !year.isActive;
         const label = newState ? 'activar' : 'cerrar';
         this.confirmationService.confirm({
@@ -310,10 +352,15 @@ export class SettingsComponent implements OnInit, OnDestroy {
                 this.settingsService
                     .toggleYearActive(year.idSchoolYear, newState)
                     .pipe(takeUntil(this.destroy$))
-                    .subscribe(() => {
-                        this.loadYears();
-                        this.loadAll();
-                        this.messageService.add({ severity: 'success', summary: `Año lectivo ${newState ? 'activado' : 'cerrado'}` });
+                    .subscribe({
+                        next: () => {
+                            this.loadYears();
+                            this.loadAll();
+                            this.messageService.add({
+                                severity: 'success',
+                                summary: `Año lectivo ${newState ? 'activado' : 'cerrado'}`
+                            });
+                        }
                     });
             }
         });
@@ -329,9 +376,12 @@ export class SettingsComponent implements OnInit, OnDestroy {
             this.yearForm.markAllAsTouched();
             return;
         }
+        const id = this.idCompany;
+        if (!id) return;
         this.savingYear.set(true);
         const v = this.yearForm.value;
         const req: CreateSchoolYearRequest = {
+            idCompany: id,
             name: v.name,
             startDate: this.dateToStr(v.startDate),
             endDate: this.dateToStr(v.endDate)
@@ -340,11 +390,13 @@ export class SettingsComponent implements OnInit, OnDestroy {
             .createSchoolYear(req)
             .pipe(takeUntil(this.destroy$))
             .subscribe({
-                next: () => {
+                next: (res) => {
                     this.savingYear.set(false);
-                    this.showYearForm.set(false);
-                    this.loadYears();
-                    this.messageService.add({ severity: 'success', summary: 'Año lectivo creado' });
+                    if (res.success) {
+                        this.showYearForm.set(false);
+                        this.loadYears();
+                        this.messageService.add({ severity: 'success', summary: 'Año lectivo creado' });
+                    }
                 },
                 error: () => this.savingYear.set(false)
             });
@@ -353,7 +405,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
     openNewPeriod(): void {
         if (!this.selectedYear()) return;
         const nextNum = this.periods().length + 1;
-        this.periodForm.reset({ periodNumber: nextNum, idSchoolYear: this.selectedYear()!.idSchoolYear });
+        this.periodForm.reset({
+            periodNumber: nextNum,
+            idSchoolYear: this.selectedYear()!.idSchoolYear
+        });
         this.showPeriodForm.set(true);
     }
 
@@ -375,45 +430,57 @@ export class SettingsComponent implements OnInit, OnDestroy {
             .createPeriod(req)
             .pipe(takeUntil(this.destroy$))
             .subscribe({
-                next: () => {
+                next: (res) => {
                     this.savingPeriod.set(false);
-                    this.showPeriodForm.set(false);
-                    this.loadPeriods(this.selectedYear()!.idSchoolYear);
-                    this.messageService.add({ severity: 'success', summary: 'Período creado' });
+                    if (res.success) {
+                        this.showPeriodForm.set(false);
+                        this.loadPeriods(this.selectedYear()!.idSchoolYear);
+                        this.messageService.add({ severity: 'success', summary: 'Período creado' });
+                    }
                 },
                 error: () => this.savingPeriod.set(false)
             });
     }
 
-    togglePeriod(period: SchoolPeriodMock): void {
+    togglePeriod(period: SchoolPeriodResponse): void {
         this.settingsService
             .togglePeriodActive(period.idSchoolPeriod, !period.isActive)
             .pipe(takeUntil(this.destroy$))
-            .subscribe(() => {
-                this.loadPeriods(this.selectedYear()!.idSchoolYear);
-                this.loadAll();
-                this.messageService.add({ severity: 'success', summary: `Período ${!period.isActive ? 'activado' : 'cerrado'}` });
+            .subscribe({
+                next: () => {
+                    this.loadPeriods(this.selectedYear()!.idSchoolYear);
+                    this.loadAll();
+                    this.messageService.add({
+                        severity: 'success',
+                        summary: `Período ${!period.isActive ? 'activado' : 'cerrado'}`
+                    });
+                }
             });
     }
 
     // ── Tab 3: Parámetros ─────────────────────────────────────────────────────
 
     loadParams(): void {
+        const id = this.idCompany;
+        if (!id) return;
         this.loadingParams.set(true);
         this.settingsService
-            .getParams()
+            .getParams(id)
             .pipe(takeUntil(this.destroy$))
-            .subscribe((p) => {
-                this.params.set(p);
-                this.loadingParams.set(false);
+            .subscribe({
+                next: (res) => {
+                    if (res.success) this.params.set(res.data ?? []);
+                    this.loadingParams.set(false);
+                },
+                error: () => this.loadingParams.set(false)
             });
     }
 
-    get filteredParams(): SystemParamMock[] {
+    get filteredParams(): SystemParamResponse[] {
         return this.params().filter((p) => p.category === this.activeParamCategory());
     }
 
-    startEditParam(param: SystemParamMock): void {
+    startEditParam(param: SystemParamResponse): void {
         this.paramTempValues.set(param.idParam, param.paramValue);
         this.editingParamId.set(param.idParam);
     }
@@ -422,7 +489,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
         this.editingParamId.set(null);
     }
 
-    saveParam(param: SystemParamMock): void {
+    saveParam(param: SystemParamResponse): void {
         const newValue = this.paramTempValues.get(param.idParam);
         if (newValue === undefined || newValue === param.paramValue) {
             this.editingParamId.set(null);
@@ -432,11 +499,18 @@ export class SettingsComponent implements OnInit, OnDestroy {
             .updateParam(param.idParam, String(newValue))
             .pipe(takeUntil(this.destroy$))
             .subscribe({
-                next: (updated) => {
+                next: (res) => {
                     this.editingParamId.set(null);
-                    this.params.update((list) => list.map((p) => (p.idParam === updated.idParam ? updated : p)));
+                    if (res.success && res.data) {
+                        this.params.update((list) => list.map((p) => (p.idParam === res.data!.idParam ? res.data! : p)));
+                    }
                     this.loadAll();
-                    this.messageService.add({ severity: 'success', summary: 'Parámetro actualizado', detail: param.label, life: 2000 });
+                    this.messageService.add({
+                        severity: 'success',
+                        summary: 'Parámetro actualizado',
+                        detail: param.label,
+                        life: 2000
+                    });
                 }
             });
     }
@@ -449,7 +523,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
         this.paramTempValues.set(idParam, value);
     }
 
-    getParamOptions(param: SystemParamMock): { label: string; value: string }[] {
+    getParamOptions(param: SystemParamResponse): { label: string; value: string }[] {
         if (!param.options) return [];
         try {
             return (JSON.parse(param.options) as string[]).map((o) => ({ label: o, value: o }));
@@ -472,9 +546,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
     }
 
     private buildForms(): void {
+        // companyForm: tradeName renombrado a legalName
         this.companyForm = this.fb.group({
             name: ['', Validators.required],
-            tradeName: ['', Validators.required],
+            legalName: ['', Validators.required],
             ruc: ['', Validators.required],
             address: ['', Validators.required],
             phone: ['', Validators.required],
@@ -484,7 +559,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
         this.branchForm = this.fb.group({
             name: ['', Validators.required],
             code: ['', Validators.required],
-            address: ['', Validators.required],
+            address: [''],
             phone: [''],
             isMain: [false]
         });

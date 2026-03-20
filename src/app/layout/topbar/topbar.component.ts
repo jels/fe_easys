@@ -19,7 +19,8 @@ import { AuthService } from '../../core/services/api/auth.service';
 export class TopbarComponent {
     items!: MenuItem[];
     private authService = inject(AuthService);
-    rolUser = this.authService.getUserRole();
+    // rolUser = this.authService.getUserRoles();
+    rolUser = '';
     user: boolean = false;
     displayConfirmation: boolean = false;
 

@@ -1,4 +1,5 @@
 // src/app/modules/staff/staff.component.ts
+
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -15,8 +16,14 @@ import { TooltipModule } from 'primeng/tooltip';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
-import { StaffMock } from '../../shared/data/staff.mock';
-import { StaffService, StaffFilter } from '../../core/services/conf/staff.service';
+// Services
+import { StaffService, StaffFilter } from '../../core/services/api/staff.service';
+import { AuthService } from '../../core/services/api/auth.service';
+
+// Models
+import { StaffResponse } from '../../core/models/staff.models';
+
+// Dialogs
 import { StaffFormDialogComponent } from '../../shared/components/staff/staff-form-dialog/staff-form-dialog.component';
 import { StaffDetailDialogComponent } from '../../shared/components/staff/staff-detail-dialog/staff-detail-dialog.component';
 
@@ -29,11 +36,12 @@ import { StaffDetailDialogComponent } from '../../shared/components/staff/staff-
     providers: [ConfirmationService, MessageService]
 })
 export class StaffComponent implements OnInit, OnDestroy {
-    staffList = signal<StaffMock[]>([]);
+    staffList = signal<StaffResponse[]>([]);
     loading = signal(false);
     totalRecords = signal(0);
 
-    page = 1;
+    // Paginación server-side (0-based para Spring Data)
+    page = 0;
     pageSize = 10;
     pageSizeOptions = [5, 10, 25, 50];
 
@@ -42,7 +50,7 @@ export class StaffComponent implements OnInit, OnDestroy {
     selectedType: string | null = null;
     selectedStatus: string | null = null;
 
-    typeOptions = [
+    readonly typeOptions = [
         { label: 'Todos los tipos', value: null },
         { label: 'Docente', value: 'TEACHER' },
         { label: 'Administrativo', value: 'ADMINISTRATIVE' },
@@ -50,7 +58,7 @@ export class StaffComponent implements OnInit, OnDestroy {
         { label: 'Soporte', value: 'SUPPORT' }
     ];
 
-    statusOptions = [
+    readonly statusOptions = [
         { label: 'Todos los estados', value: null },
         { label: 'Activo', value: 'ACTIVE' },
         { label: 'Inactivo', value: 'INACTIVE' },
@@ -66,6 +74,7 @@ export class StaffComponent implements OnInit, OnDestroy {
 
     constructor(
         private staffService: StaffService,
+        private authService: AuthService,
         private confirmationService: ConfirmationService,
         private messageService: MessageService
     ) {}
@@ -81,24 +90,35 @@ export class StaffComponent implements OnInit, OnDestroy {
     // ── Data ──────────────────────────────────────────────────────────────────
 
     loadStaff(): void {
+        const idCompany = this.authService.idCompany;
+        if (!idCompany) return;
         this.loading.set(true);
-        const filters: StaffFilter = {};
+
+        const filters: StaffFilter = {
+            page: this.page,
+            size: this.pageSize
+        };
         if (this.searchQuery) filters.search = this.searchQuery;
         if (this.selectedType) filters.staffType = this.selectedType;
         if (this.selectedStatus) filters.status = this.selectedStatus;
 
         this.staffService
-            .getAll(filters)
+            .getAll(idCompany, filters)
             .pipe(takeUntil(this.destroy$))
             .subscribe({
-                next: (data) => {
-                    this.totalRecords.set(data.length);
-                    const start = (this.page - 1) * this.pageSize;
-                    this.staffList.set(data.slice(start, start + this.pageSize));
+                next: (res) => {
+                    if (res.success && res.data) {
+                        this.staffList.set(res.data.content);
+                        this.totalRecords.set(res.data.totalElements);
+                    }
                     this.loading.set(false);
                 },
                 error: () => {
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo cargar el personal' });
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: 'No se pudo cargar el personal'
+                    });
                     this.loading.set(false);
                 }
             });
@@ -107,11 +127,11 @@ export class StaffComponent implements OnInit, OnDestroy {
     // ── Filtros ───────────────────────────────────────────────────────────────
 
     onSearch(): void {
-        this.page = 1;
+        this.page = 0;
         this.loadStaff();
     }
     onFilterChange(): void {
-        this.page = 1;
+        this.page = 0;
         this.loadStaff();
     }
 
@@ -119,12 +139,12 @@ export class StaffComponent implements OnInit, OnDestroy {
         this.searchQuery = '';
         this.selectedType = null;
         this.selectedStatus = null;
-        this.page = 1;
+        this.page = 0;
         this.loadStaff();
     }
 
     onPageChange(event: TableLazyLoadEvent): void {
-        this.page = (event.first ?? 0) / (event.rows ?? 10) + 1;
+        this.page = Math.floor((event.first ?? 0) / (event.rows ?? 10));
         this.pageSize = event.rows ?? 10;
         this.loadStaff();
     }
@@ -136,12 +156,12 @@ export class StaffComponent implements OnInit, OnDestroy {
         this.showFormDialog.set(true);
     }
 
-    openEdit(member: StaffMock): void {
+    openEdit(member: StaffResponse): void {
         this.selectedStaffId.set(member.idStaff);
         this.showFormDialog.set(true);
     }
 
-    openDetail(member: StaffMock): void {
+    openDetail(member: StaffResponse): void {
         this.selectedStaffId.set(member.idStaff);
         this.showDetailDialog.set(true);
     }
@@ -163,46 +183,85 @@ export class StaffComponent implements OnInit, OnDestroy {
         this.showDetailDialog.set(false);
     }
 
-    toggleStatus(member: StaffMock): void {
+    toggleStatus(member: StaffResponse): void {
         const newStatus = member.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
         const actionLabel = newStatus === 'ACTIVE' ? 'activar' : 'desactivar';
+        const fullName = member.person.fullName;
 
         this.confirmationService.confirm({
-            message: `¿Deseas ${actionLabel} a <strong>${member.fullName}</strong>?`,
+            message: `¿Deseas ${actionLabel} a <strong>${fullName}</strong>?`,
             header: 'Cambiar Estado',
             icon: 'pi pi-question-circle',
             acceptLabel: 'Sí, cambiar',
             rejectLabel: 'Cancelar',
             acceptButtonStyleClass: 'p-button-primary',
             accept: () => {
-                this.staffList.set(this.staffList().map((s) => (s.idStaff === member.idStaff ? { ...s, status: newStatus } : s)));
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Estado actualizado',
-                    detail: `${member.fullName} → ${newStatus === 'ACTIVE' ? 'Activo' : 'Inactivo'}`
-                });
+                this.staffService
+                    .update(member.idStaff, { status: newStatus })
+                    .pipe(takeUntil(this.destroy$))
+                    .subscribe({
+                        next: () => {
+                            this.loadStaff();
+                            this.messageService.add({
+                                severity: 'success',
+                                summary: 'Estado actualizado',
+                                detail: `${fullName} → ${newStatus === 'ACTIVE' ? 'Activo' : 'Inactivo'}`
+                            });
+                        },
+                        error: () => {
+                            // Fallback local si el backend no tiene endpoint de toggle
+                            this.staffList.update((list) => list.map((s) => (s.idStaff === member.idStaff ? { ...s, status: newStatus } : s)));
+                            this.messageService.add({
+                                severity: 'warn',
+                                summary: 'Estado actualizado (local)',
+                                detail: `${fullName} → ${newStatus === 'ACTIVE' ? 'Activo' : 'Inactivo'}`
+                            });
+                        }
+                    });
             }
         });
     }
 
-    deleteStaff(member: StaffMock): void {
+    deleteStaff(member: StaffResponse): void {
+        const fullName = member.person.fullName;
         this.confirmationService.confirm({
-            message: `¿Estás seguro de eliminar a <strong>${member.fullName}</strong>?`,
+            message: `¿Estás seguro de eliminar a <strong>${fullName}</strong>?`,
             header: 'Confirmar Eliminación',
             icon: 'pi pi-exclamation-triangle',
             acceptLabel: 'Sí, eliminar',
             rejectLabel: 'Cancelar',
             acceptButtonStyleClass: 'p-button-danger',
             accept: () => {
-                this.staffList.set(this.staffList().filter((s) => s.idStaff !== member.idStaff));
-                this.totalRecords.update((v) => v - 1);
-                this.messageService.add({ severity: 'success', summary: 'Eliminado', detail: `${member.fullName} eliminado` });
+                this.staffService
+                    .delete(member.idStaff)
+                    .pipe(takeUntil(this.destroy$))
+                    .subscribe({
+                        next: () => {
+                            this.loadStaff();
+                            this.messageService.add({
+                                severity: 'success',
+                                summary: 'Eliminado',
+                                detail: `${fullName} eliminado`
+                            });
+                        },
+                        error: () => {
+                            this.messageService.add({
+                                severity: 'error',
+                                summary: 'Error',
+                                detail: 'No se pudo eliminar al empleado'
+                            });
+                        }
+                    });
             }
         });
     }
 
     exportToExcel(): void {
-        this.messageService.add({ severity: 'info', summary: 'Exportar', detail: 'En producción se exportará el listado del personal en Excel' });
+        this.messageService.add({
+            severity: 'info',
+            summary: 'Exportar',
+            detail: 'En producción se exportará el listado del personal en Excel'
+        });
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -212,41 +271,50 @@ export class StaffComponent implements OnInit, OnDestroy {
     }
 
     getTypeLabel(type: string): string {
-        const map: Record<string, string> = {
-            TEACHER: 'Docente',
-            ADMINISTRATIVE: 'Administrativo',
-            DIRECTOR: 'Director',
-            SUPPORT: 'Soporte'
-        };
-        return map[type] ?? type;
+        return (
+            (
+                {
+                    TEACHER: 'Docente',
+                    ADMINISTRATIVE: 'Administrativo',
+                    DIRECTOR: 'Director',
+                    SUPPORT: 'Soporte'
+                } as Record<string, string>
+            )[type] ?? type
+        );
     }
 
     getTypeSeverity(type: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
-        const map: Record<string, 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast'> = {
-            TEACHER: 'info',
-            ADMINISTRATIVE: 'success',
-            DIRECTOR: 'contrast',
-            SUPPORT: 'secondary'
-        };
-        return map[type] ?? 'secondary';
+        return (
+            (
+                {
+                    TEACHER: 'info',
+                    ADMINISTRATIVE: 'success',
+                    DIRECTOR: 'contrast',
+                    SUPPORT: 'secondary'
+                } as Record<string, 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast'>
+            )[type] ?? 'secondary'
+        );
     }
 
     getStatusLabel(status: string): string {
-        const map: Record<string, string> = { ACTIVE: 'Activo', INACTIVE: 'Inactivo', ON_LEAVE: 'De licencia' };
-        return map[status] ?? status;
+        return ({ ACTIVE: 'Activo', INACTIVE: 'Inactivo', ON_LEAVE: 'De licencia' } as Record<string, string>)[status] ?? status;
     }
 
     getStatusSeverity(status: string): 'success' | 'danger' | 'warn' | 'secondary' | 'info' | 'contrast' {
-        const map: Record<string, 'success' | 'danger' | 'warn' | 'secondary' | 'info' | 'contrast'> = {
-            ACTIVE: 'success',
-            INACTIVE: 'danger',
-            ON_LEAVE: 'warn'
-        };
-        return map[status] ?? 'secondary';
+        return (
+            (
+                {
+                    ACTIVE: 'success',
+                    INACTIVE: 'danger',
+                    ON_LEAVE: 'warn'
+                } as Record<string, 'success' | 'danger' | 'warn' | 'secondary' | 'info' | 'contrast'>
+            )[status] ?? 'secondary'
+        );
     }
 
-    getInitials(fullName: string): string {
-        return fullName
+    // StaffResponse: fullName en person.fullName
+    getInitials(member: StaffResponse): string {
+        return member.person.fullName
             .split(' ')
             .slice(0, 2)
             .map((w) => w[0])

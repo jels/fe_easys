@@ -27,28 +27,29 @@
         <div class="stat-card stat-present">
             <div class="stat-icon"><i class="pi pi-check-circle"></i></div>
             <div class="stat-info">
-                <span class="stat-value">{{ stats()!.studentsPresentToday }}</span>
+                <span class="stat-value">{{ stats()!.presentToday }}</span>
                 <span class="stat-label">Alumnos presentes</span>
             </div>
         </div>
         <div class="stat-card stat-absent">
             <div class="stat-icon"><i class="pi pi-times-circle"></i></div>
             <div class="stat-info">
-                <span class="stat-value">{{ stats()!.studentsAbsentToday }}</span>
+                <span class="stat-value">{{ stats()!.absentToday }}</span>
                 <span class="stat-label">Alumnos ausentes</span>
             </div>
         </div>
         <div class="stat-card stat-late">
             <div class="stat-icon"><i class="pi pi-clock"></i></div>
             <div class="stat-info">
-                <span class="stat-value">{{ stats()!.studentsLateToday }}</span>
+                <span class="stat-value">{{ stats()!.lateToday }}</span>
                 <span class="stat-label">Tardanzas hoy</span>
             </div>
         </div>
         <div class="stat-card stat-staff">
             <div class="stat-icon"><i class="pi pi-id-card"></i></div>
             <div class="stat-info">
-                <span class="stat-value">{{ stats()!.staffPresentToday }}</span>
+                <!-- OperationsStatsResponse no tiene staffPresent, se puede usar un futuro campo -->
+                <span class="stat-value">–</span>
                 <span class="stat-label">Personal presente</span>
             </div>
         </div>
@@ -62,7 +63,7 @@
         <div class="stat-card stat-infraction">
             <div class="stat-icon"><i class="pi pi-exclamation-triangle"></i></div>
             <div class="stat-info">
-                <span class="stat-value">{{ stats()!.infractionsPending }}</span>
+                <span class="stat-value">{{ stats()!.infractionsPendingNotification }}</span>
                 <span class="stat-label">Infracciones pendientes</span>
             </div>
         </div>
@@ -154,11 +155,10 @@
                                 <td>
                                     <div class="person-cell">
                                         <div class="person-name">{{ log.studentName }}</div>
-                                        <div class="person-sub mono">{{ log.enrollmentNumber }}</div>
                                     </div>
                                 </td>
                                 <td>
-                                    <span class="grade-badge">{{ log.gradeName }} – {{ log.sectionName }}</span>
+                                    <span class="grade-badge">{{ log.gradeName ?? '–' }}</span>
                                 </td>
                                 <td>
                                     <span class="time-value" [class.time-late]="log.isLate">
@@ -235,16 +235,17 @@
                             </tr>
                         </ng-template>
                         <ng-template pTemplate="body" let-log>
-                            <tr [class.row-absent]="log.isAbsent" [class.row-late]="log.isLate && !log.isAbsent">
+                            <!-- StaffAccessLogResponse no tiene isAbsent, solo isLate -->
+                            <tr [class.row-late]="log.isLate">
                                 <td>
                                     <div class="person-cell">
                                         <div class="person-name">{{ log.staffName }}</div>
-                                        <div class="person-sub mono">{{ log.employeeNumber }}</div>
+                                        <div class="person-sub">{{ log.position ?? '' }}</div>
                                     </div>
                                 </td>
                                 <td>
-                                    <p-tag [value]="getStaffTypeLabel(log.staffType)"
-                                        [severity]="getStaffTypeSeverity(log.staffType)" />
+                                    <p-tag [value]="getStaffTypeLabel(log.staffType ?? '')"
+                                        [severity]="getStaffTypeSeverity(log.staffType ?? '')" />
                                 </td>
                                 <td>
                                     <span class="time-value" [class.time-late]="log.isLate">
@@ -262,12 +263,7 @@
                                     }
                                 </td>
                                 <td class="text-center">
-                                    @if (log.isAbsent) {
-                                    <p-tag [value]="log.absenceJustified ? 'Justificada' : 'Injustificada'"
-                                        [severity]="log.absenceJustified ? 'info' : 'danger'" />
-                                    } @else {
                                     <p-tag value="Presente" severity="success" />
-                                    }
                                 </td>
                                 <td><span class="obs-text">{{ log.observations ?? '–' }}</span></td>
                             </tr>
@@ -287,7 +283,9 @@
 
                 <!-- ── TAB 3: Ausentes del día ────────────────────────────── -->
                 <p-tabpanel value="2">
-                    @if (absentStudents().length === 0 && !loadingAbsents()) {
+                    @if (loadingAbsents()) {
+                    <p-skeleton height="200px" class="mt-4" />
+                    } @else if (absentStudents().length === 0) {
                     <div class="empty-tab success-empty">
                         <i class="pi pi-check-circle"></i>
                         <p>¡Sin ausentes registrados hoy!</p>
@@ -302,16 +300,13 @@
                                 </div>
                                 <div class="absent-info">
                                     <div class="absent-name">{{ log.studentName }}</div>
-                                    <!--<div class="absent-sub">{{ log.enrollmentNumber }}</div>-->
                                 </div>
                                 <p-tag [value]="log.absenceJustified ? 'Justificada' : 'Injustificada'"
                                     [severity]="log.absenceJustified ? 'info' : 'danger'" styleClass="text-xs" />
                             </div>
-                            <div class="absent-grade">
-                                {{ log.gradeName }} – {{ log.sectionName }}
-                            </div>
-                            @if (log.observations) {
-                            <div class="absent-obs">{{ log.observations }}</div>
+                            <div class="absent-grade">{{ log.gradeName ?? '–' }}</div>
+                            @if (log.absenceReason) {
+                            <div class="absent-obs">{{ log.absenceReason }}</div>
                             }
                         </div>
                         }
@@ -354,18 +349,18 @@
                                 <td>
                                     <div class="person-cell">
                                         <div class="person-name">{{ dep.studentName }}</div>
-                                        <div class="person-sub mono">{{ dep.enrollmentNumber }}</div>
                                     </div>
                                 </td>
                                 <td>
-                                    <span class="grade-badge">{{ dep.gradeName }} – {{ dep.sectionName }}</span>
+                                    <span class="grade-badge">{{ dep.gradeName ?? '–' }}</span>
                                 </td>
                                 <td>
                                     <span class="time-value">{{ formatDatetime(dep.departureDatetime) }}</span>
                                 </td>
-                                <td class="font-medium">{{ dep.pickupPersonName }}</td>
-                                <td>{{ getRelationshipLabel(dep.pickupPersonRelationship) }}</td>
-                                <td>{{ dep.authorizedByStaffName ?? '–' }}</td>
+                                <!-- pickedUpByName / pickedUpByRelationship / authorizedByName — campos reales del backend -->
+                                <td class="font-medium">{{ dep.pickedUpByName ?? '–' }}</td>
+                                <td>{{ getRelationshipLabel(dep.pickedUpByRelationship ?? '') }}</td>
+                                <td>{{ dep.authorizedByName ?? '–' }}</td>
                                 <td><span class="obs-text">{{ dep.reason ?? '–' }}</span></td>
                             </tr>
                         </ng-template>
@@ -404,42 +399,39 @@
                         <ng-template pTemplate="header">
                             <tr>
                                 <th>Alumno</th>
-                                <th>Grado</th>
                                 <th>Fecha</th>
                                 <th>Tipo</th>
                                 <th>Gravedad</th>
                                 <th>Descripción</th>
                                 <th>Sanción</th>
-                                <th class="text-center">Padres</th>
-                                <th class="text-center">Resuelto</th>
+                                <th class="text-center">Padres notificados</th>
+                                <th class="text-center">Estado</th>
                             </tr>
                         </ng-template>
                         <ng-template pTemplate="body" let-inf>
-                            <tr [class.row-resolved]="inf.resolved">
+                            <!-- isActive=false equivale a "resuelto" en soft-delete -->
+                            <tr [class.row-resolved]="!inf.isActive">
                                 <td>
                                     <div class="person-cell">
                                         <div class="person-name">{{ inf.studentName }}</div>
-                                        <div class="person-sub mono">{{ inf.enrollmentNumber }}</div>
                                     </div>
-                                </td>
-                                <td>
-                                    <span class="grade-badge">{{ inf.gradeName }} – {{ inf.sectionName }}</span>
                                 </td>
                                 <td>{{ inf.incidentDate }}</td>
                                 <td class="font-medium">{{ inf.infractionTypeName }}</td>
                                 <td>
                                     <p-tag [value]="getSeverityLabel(inf.severity ?? '')"
-                                        [severity]="getSeverityTag(inf.severity ?? '')" />
+                                        [severity]="getSeverityTag(inf.severity)" />
                                 </td>
                                 <td><span class="obs-text">{{ inf.description }}</span></td>
                                 <td><span class="obs-text">{{ inf.sanctionApplied ?? '–' }}</span></td>
                                 <td class="text-center">
-                                    <i
-                                        [class]="inf.parentNotified ? 'pi pi-check-circle text-green-500' : 'pi pi-times-circle text-red-400'"></i>
+                                    <i [class]="inf.parentNotified
+                                        ? 'pi pi-check-circle text-green-500'
+                                        : 'pi pi-times-circle text-red-400'"></i>
                                 </td>
                                 <td class="text-center">
-                                    @if (inf.resolved) {
-                                    <p-tag value="Sí" severity="success" />
+                                    @if (!inf.isActive) {
+                                    <p-tag value="Resuelto" severity="success" />
                                     } @else {
                                     <p-tag value="Pendiente" severity="warn" />
                                     }
@@ -448,7 +440,7 @@
                         </ng-template>
                         <ng-template pTemplate="emptymessage">
                             <tr>
-                                <td colspan="9">
+                                <td colspan="8">
                                     <div class="empty-tab">
                                         <i class="pi pi-exclamation-circle"></i>
                                         <p>Sin infracciones registradas</p>
@@ -458,7 +450,6 @@
                         </ng-template>
                     </p-table>
                 </p-tabpanel>
-
 
                 <!-- ── TAB 6: Escáner QR ─────────────────────────────────── -->
                 <p-tabpanel value="5">
@@ -490,7 +481,6 @@
                             <div class="qr-viewport" [class.qr-flash-ok]="qrFlashOk()"
                                 [class.qr-flash-err]="qrFlashErr()" [style.--mode-color]="getQrModeColor(qrScanMode())">
 
-                                <!-- Sin cámara -->
                                 @if (!qrHasCamera()) {
                                 <div class="qr-no-cam">
                                     <i class="pi pi-camera"></i>
@@ -499,14 +489,12 @@
                                 </div>
                                 }
 
-                                <!-- Scanner ZXing -->
                                 <zxing-scanner [enable]="qrScannerActive()" [device]="qrSelectedCamera()"
                                     [formats]="qrFormats" (camerasFound)="onQrCamerasFound($event)"
                                     (camerasNotFound)="onQrCamerasNotFound()" (scanSuccess)="onQrCodeScanned($event)"
                                     (scanError)="onQrScanError($event)" style="width:100%;height:100%;display:block">
                                 </zxing-scanner>
 
-                                <!-- Marco QR animado -->
                                 <div class="qr-frame">
                                     <span class="qr-corner tl"></span>
                                     <span class="qr-corner tr"></span>
@@ -515,7 +503,6 @@
                                     <span class="qr-scan-line"></span>
                                 </div>
 
-                                <!-- Hint inferior -->
                                 <div class="qr-hint">
                                     Apuntá al código QR del carnet
                                     · Modo: <strong>{{ getQrModeLabel(qrScanMode()) }}</strong>
@@ -523,15 +510,16 @@
                             </div>
 
                             <!-- Feedback del último escaneo -->
+                            <!-- QrScanResultResponse: fullName y displayLabel directamente en el objeto -->
                             @if (qrScanResult(); as res) {
                             <div class="qr-feedback" [class.qr-ok]="res.success" [class.qr-err]="!res.success">
                                 <span class="qr-fb-icon">{{ res.success ? '✅' : '❌' }}</span>
                                 <div class="qr-fb-body">
                                     <div class="qr-fb-name">
-                                        {{ res.success ? res.person?.fullName : 'QR no reconocido' }}
+                                        {{ res.success ? res.fullName : 'QR no reconocido' }}
                                     </div>
-                                    @if (res.success && res.person?.displayLabel) {
-                                    <div class="qr-fb-grade">{{ res.person?.displayLabel }}</div>
+                                    @if (res.success && res.displayLabel) {
+                                    <div class="qr-fb-grade">{{ res.displayLabel }}</div>
                                     }
                                     <div class="qr-fb-mode">
                                         <span class="qr-mode-pill" [style.background]="getQrModeColor(qrScanMode())">
@@ -543,7 +531,7 @@
                             </div>
                             }
 
-                            <!-- Barra inferior: stats + acciones -->
+                            <!-- Barra inferior -->
                             <div class="qr-bottom-bar">
                                 <div class="qr-session-info">
                                     <span class="qr-session-num">{{ qrScanCount() }}</span>
@@ -582,7 +570,8 @@
                                 <div class="qr-log-item" [class.log-ok]="item.success" [class.log-err]="!item.success">
                                     <div class="log-icon-wrap" [style.background]="getQrModeColor(item.mode) + '22'">
                                         <i class="pi" [class.pi-check]="item.success" [class.pi-times]="!item.success"
-                                            [style.color]="item.success ? getQrModeColor(item.mode) : '#ef4444'"></i>
+                                            [style.color]="item.success ? getQrModeColor(item.mode) : '#ef4444'">
+                                        </i>
                                     </div>
                                     <div class="log-info">
                                         <div class="log-name">{{ item.name }}</div>
@@ -610,12 +599,12 @@
 
 <p-toast position="top-right" />
 
-<!-- Modales -->
-<app-access-log-dialog [visible]="showAccessDialog()" [type]="accessDialogType()" [students]="students" [staff]="staff"
-    [defaultDate]="dateStr" (onSave)="onAccessSaved()" (onClose)="onDialogClosed()" />
+<!-- Modales — students y staff ahora son signals cargados del backend -->
+<app-access-log-dialog [visible]="showAccessDialog()" [type]="accessDialogType()" [students]="students()"
+    [staff]="staff()" [defaultDate]="dateStr" (onSave)="onAccessSaved()" (onClose)="onDialogClosed()" />
 
-<app-early-departure-dialog [visible]="showDepartureDialog()" [students]="students" [staff]="staff"
+<app-early-departure-dialog [visible]="showDepartureDialog()" [students]="students()" [staff]="staff()"
     [defaultDate]="dateStr" (onSave)="onDepartureSaved()" (onClose)="onDialogClosed()" />
 
-<app-infraction-dialog [visible]="showInfractionDialog()" [students]="students" (onSave)="onInfractionSaved()"
+<app-infraction-dialog [visible]="showInfractionDialog()" [students]="students()" (onSave)="onInfractionSaved()"
     (onClose)="onDialogClosed()" />

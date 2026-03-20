@@ -57,7 +57,7 @@
         <div class="receipt-grid">
             <div class="receipt-field">
                 <span class="rf-label">Concepto</span>
-                <span class="rf-value">{{ payment()!.paymentMethodName ?? '–' }}</span>
+                <span class="rf-value">{{ payment()?.paymentMethodName ?? '–' }}</span>
             </div>
             <div class="receipt-field">
                 <span class="rf-label">Fecha</span>
@@ -66,7 +66,7 @@
             <div class="receipt-field">
                 <span class="rf-label">Método</span>
                 <span class="rf-value">
-                    <i [class]="getMethodIcon(payment()!.paymentMethodName ?? '')" style="margin-right:0.3rem"></i>
+                    <i [class]="getMethodIcon(payment()?.paymentMethodName ?? '')" style="margin-right:0.3rem"></i>
                     {{ payment()!.paymentMethodName }}
                 </span>
             </div>

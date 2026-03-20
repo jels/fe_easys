@@ -463,7 +463,7 @@
 <p-toast position="top-right" />
 
 <!-- Modales -->
-<app-payment-form-dialog [visible]="showFormDialog()" [students]="students"
+<app-payment-form-dialog [visible]="showFormDialog()" [students]="students()"
     [preselectedInstallment]="preselectedInstallment()" (onSave)="onPaymentSaved()" (onClose)="onDialogClosed()" />
 
 <app-payment-detail-dialog [visible]="showDetailDialog()" [paymentId]="selectedPaymentId()"
